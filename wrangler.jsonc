@@ -1,6 +1,6 @@
 {
   // Troque "name" pelo nome do seu Worker/projeto no Cloudflare (o que aparece na lista de Workers & Pages).
-  "name": "resolvoja"
+  "name": "resolvoja",
   "main": "worker.js",
   "compatibility_date": "2026-10-01",
   "assets": {

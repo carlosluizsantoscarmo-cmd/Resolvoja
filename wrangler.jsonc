@@ -10,7 +10,7 @@
   },
   "kv_namespaces": [
     // Cole aqui o ID do KV "LEADS" (Storage & Databases > KV > LEADS > ID).
-    { "binding": "LEADS", "id": "COLE_AQUI_O_ID_DO_KV" }
+    { "binding": "LEADS", "id": "2e5098ab-628c-4cf5-b766-d8582fa7f193" }
   ],
   "vars": {
     "ALLOWED_ORIGINS": "https://www.resolvoja.app.br,https://resolvoja.app.br"

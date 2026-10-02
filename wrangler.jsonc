@@ -1,0 +1,18 @@
+{
+  // Troque "name" pelo nome do seu Worker/projeto no Cloudflare (o que aparece na lista de Workers & Pages).
+  "name": "resolvoja-site",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "kv_namespaces": [
+    // Cole aqui o ID do KV "LEADS" (Storage & Databases > KV > LEADS > ID).
+    { "binding": "LEADS", "id": "COLE_AQUI_O_ID_DO_KV" }
+  ],
+  "vars": {
+    "ALLOWED_ORIGINS": "https://www.resolvoja.app.br,https://resolvoja.app.br"
+  }
+}

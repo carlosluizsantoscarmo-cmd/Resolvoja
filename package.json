@@ -1,0 +1,10 @@
+{
+  "name": "resolvoja-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test/functions.test.mjs && node test/worker.test.mjs",
+    "dev": "wrangler dev --var ADMIN_TOKEN:troque-por-um-token-longo-123",
+    "deploy": "wrangler deploy"
+  }
+}

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Cadastros — Resolvo Já</title>
+<style>
+:root{--bg:#F3F5FC;--surface:#fff;--text:#121A3A;--muted:#566080;--line:#D9DDEE;--brand:#1F3BD1;--err:#A12626}
+@media (prefers-color-scheme:dark){:root{--bg:#0D1230;--surface:#151B3E;--text:#EEF0FA;--muted:#A3ABCF;--line:#283062;--brand:#8FA2FF;--err:#FF9B9B}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:24px 16px}h1{font-size:24px;margin:0 0 4px}p{color:var(--muted);margin:0 0 16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px}
+.row{display:flex;gap:8px;flex-wrap:wrap}input{flex:1;min-width:220px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font:inherit}
+button{padding:10px 16px;border:0;border-radius:10px;background:var(--brand);color:#fff;font:600 15px system-ui;cursor:pointer}
+button.ghost{background:transparent;color:var(--brand);border:1.5px solid var(--brand)}button.del{background:transparent;color:var(--err);border:1px solid var(--err);padding:4px 10px;font-size:13px}
+.tw{overflow-x:auto;margin-top:16px;border:1px solid var(--line);border-radius:12px}table{border-collapse:collapse;width:100%;min-width:760px;font-size:14px}
+th{text-align:left;padding:10px;background:var(--bg);color:var(--muted)}td{padding:10px;border-top:1px solid var(--line);vertical-align:top}
+#msg{margin-top:12px;color:var(--err);font-weight:600}
+</style>
+</head>
+<body>
+<main>
+  <h1>Cadastros da lista de espera</h1>
+  <p>Área da equipe. Informe o token de administração para ver os cadastros.</p>
+  <div class="card">
+    <form id="f" class="row">
+      <input id="tk" type="password" autocomplete="off" placeholder="Token de administração" aria-label="Token de administração" required>
+      <button type="submit">Ver cadastros</button>
+      <button type="button" class="ghost" id="csv" hidden>Baixar planilha (CSV)</button>
+    </form>
+    <div id="msg" role="alert"></div>
+    <div id="count" style="margin-top:12px;color:var(--muted)"></div>
+    <div class="tw" id="tw" hidden><table><thead><tr><th>Quando</th><th>Tipo</th><th>Nome</th><th>WhatsApp</th><th>Local</th><th>Serviços</th><th>Obs.</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+  </div>
+</main>
+<script>
+(function(){
+  var token='';
+  var $=function(i){return document.getElementById(i)};
+  function td(text){var c=document.createElement('td');c.textContent=text==null?'':text;return c}
+  function auth(){return {Authorization:'Bearer '+token}}
+  function load(){
+    $('msg').textContent='';
+    return fetch('/api/leads',{headers:auth()}).then(function(r){
+      if(r.status===401)throw new Error('Token incorreto.');
+      if(!r.ok)throw new Error('Não foi possível carregar agora.');
+      return r.json();
+    }).then(function(d){
+      $('count').textContent=d.total?d.total+' cadastro'+(d.total>1?'s':''):'Nenhum cadastro ainda.';
+      $('tw').hidden=!d.total;$('csv').hidden=!d.total;
+      var body=$('rows');body.textContent='';
+      d.items.forEach(function(x){
+        var tr=document.createElement('tr');
+        tr.appendChild(td(new Date(x.criadoEm).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})));
+        tr.appendChild(td(x.tipo==='pro'?'Profissional':'Cliente'));
+        tr.appendChild(td(x.nome));tr.appendChild(td(x.whatsapp));
+        tr.appendChild(td(x.bairro+', '+x.cidade));
+        tr.appendChild(td((x.categorias||[]).join(', ')+(x.experiencia?' · '+x.experiencia:'')));
+        tr.appendChild(td(x.obs));
+        var c=document.createElement('td'),b=document.createElement('button');b.className='del';b.textContent='Excluir';
+        b.onclick=function(){
+          if(!confirm('Excluir o cadastro de '+x.nome+'? Isso não pode ser desfeito.'))return;
+          fetch('/api/leads?key='+encodeURIComponent(x.key),{method:'DELETE',headers:auth()}).then(function(r){if(!r.ok)throw 0;return load()}).catch(function(){$('msg').textContent='Não foi possível excluir.'});
+        };
+        c.appendChild(b);tr.appendChild(c);body.appendChild(tr);
+      });
+    }).catch(function(e){$('msg').textContent=e.message||'Erro.'});
+  }
+  $('f').addEventListener('submit',function(e){e.preventDefault();token=$('tk').value.trim();load()});
+  $('csv').addEventListener('click',function(){
+    fetch('/api/leads?format=csv',{headers:auth()}).then(function(r){if(!r.ok)throw 0;return r.blob()}).then(function(b){
+      var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='cadastros.csv';document.body.appendChild(a);a.click();a.remove();
+    }).catch(function(){$('msg').textContent='Não foi possível baixar.'});
+  });
+})();
+</script>
+</body>
+</html>

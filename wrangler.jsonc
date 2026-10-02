@@ -1,6 +1,6 @@
 {
   // Troque "name" pelo nome do seu Worker/projeto no Cloudflare (o que aparece na lista de Workers & Pages).
-  "name": "resolvoja-site",
+  "name": "resolvoja"
   "main": "worker.js",
   "compatibility_date": "2026-10-01",
   "assets": {
@@ -13,6 +13,6 @@
     { "binding": "LEADS", "id": "4a088cf95fb04b3bae05382d0fdb6682" }
   ],
   "vars": {
-    "ALLOWED_ORIGINS": "https://www.resolvoja.app.br,https://resolvoja.app.br"
+    "ALLOWED_ORIGINS": "https://www.resolvoja.app.br,https://resolvoja.app.br,https://resolvoja.carlosluiz-santoscarmo.workers.dev"
   }
 }

@@ -1,0 +1,10 @@
+{
+  "name": "resolvoja-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test/functions.test.mjs",
+    "dev": "wrangler pages dev public --kv LEADS --binding ADMIN_TOKEN=troque-por-um-token-longo-123",
+    "deploy": "wrangler pages deploy public --project-name resolvoja"
+  }
+}

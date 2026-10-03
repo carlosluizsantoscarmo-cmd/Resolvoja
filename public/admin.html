@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Cadastros — Resolvo Já</title>
+<title>Painel da equipe — Resolvo Já</title>
 <style>
 :root{--bg:#F3F5FC;--surface:#fff;--text:#121A3A;--muted:#566080;--line:#D9DDEE;--brand:#1F3BD1;--err:#A12626}
 @media (prefers-color-scheme:dark){:root{--bg:#0D1230;--surface:#151B3E;--text:#EEF0FA;--muted:#A3ABCF;--line:#283062;--brand:#8FA2FF;--err:#FF9B9B}}
@@ -21,8 +21,8 @@ th{text-align:left;padding:10px;background:var(--bg);color:var(--muted)}td{paddi
 </head>
 <body>
 <main>
-  <h1>Cadastros da lista de espera</h1>
-  <p>Área da equipe. Informe o token de administração para ver os cadastros.</p>
+  <h1>Painel da equipe</h1>
+  <p>Área da equipe. Informe a senha de administração para ver cadastros e pedidos.</p>
   <div class="card">
     <form id="f" class="row">
       <input id="tk" type="password" autocomplete="off" placeholder="Token de administração" aria-label="Token de administração" required>
@@ -32,6 +32,11 @@ th{text-align:left;padding:10px;background:var(--bg);color:var(--muted)}td{paddi
     <div id="msg" role="alert"></div>
     <div id="count" style="margin-top:12px;color:var(--muted)"></div>
     <div class="tw" id="tw" hidden><table><thead><tr><th>Quando</th><th>Tipo</th><th>Nome</th><th>WhatsApp</th><th>Local</th><th>Serviços</th><th>Obs.</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+  </div>
+  <div class="card" id="orders" style="margin-top:16px" hidden>
+    <h2 style="font-size:19px;margin:0 0 4px">Pedidos e pagamentos</h2>
+    <div id="ocount" style="color:var(--muted)"></div>
+    <div class="tw" id="otw" hidden><table style="min-width:680px"><thead><tr><th>Quando</th><th>Item</th><th>Nome</th><th>E-mail</th><th>Valor</th><th>Status</th><th>Pagamento (MP)</th></tr></thead><tbody id="orows"></tbody></table></div>
   </div>
 </main>
 <script>
@@ -44,6 +49,7 @@ th{text-align:left;padding:10px;background:var(--bg);color:var(--muted)}td{paddi
     $('msg').textContent='';
     return fetch('/api/leads',{headers:auth()}).then(function(r){
       if(r.status===401)throw new Error('Token incorreto.');
+      if(r.status===503)return r.json().then(function(d){throw new Error(d.error||'Servidor sem senha configurada.')});
       if(!r.ok)throw new Error('Não foi possível carregar agora.');
       return r.json();
     }).then(function(d){
@@ -67,7 +73,27 @@ th{text-align:left;padding:10px;background:var(--bg);color:var(--muted)}td{paddi
       });
     }).catch(function(e){$('msg').textContent=e.message||'Erro.'});
   }
-  $('f').addEventListener('submit',function(e){e.preventDefault();token=$('tk').value.trim();load()});
+  var STATUS={paid:'Pago',pending:'Pendente',in_process:'Em análise',rejected:'Recusado',cancelled:'Cancelado',refunded:'Reembolsado',charged_back:'Contestado'};
+  var ITEM={'cadastro-pro':'Verificação de profissional'};
+  function loadOrders(){
+    return fetch('/api/pedidos',{headers:auth()}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){
+      $('orders').hidden=false;
+      var pagos=d.items.filter(function(o){return o.status==='paid'});
+      var soma=pagos.reduce(function(t,o){return t+o.totalCents},0);
+      $('ocount').textContent=d.total?d.total+' pedido'+(d.total>1?'s':'')+' · '+pagos.length+' pago'+(pagos.length===1?'':'s')+' · R$ '+(soma/100).toFixed(2).replace('.',','):'Nenhum pedido ainda.';
+      $('otw').hidden=!d.total;
+      var body=$('orows');body.textContent='';
+      d.items.forEach(function(o){
+        var tr=document.createElement('tr');
+        tr.appendChild(td(new Date(o.criadoEm).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})));
+        tr.appendChild(td(ITEM[o.item]||o.item));tr.appendChild(td(o.nome));tr.appendChild(td(o.email));
+        tr.appendChild(td('R$ '+(o.totalCents/100).toFixed(2).replace('.',',')));
+        tr.appendChild(td(STATUS[o.status]||o.status));tr.appendChild(td(o.paymentId||''));
+        body.appendChild(tr);
+      });
+    }).catch(function(){});
+  }
+  $('f').addEventListener('submit',function(e){e.preventDefault();token=$('tk').value.trim();load().then(loadOrders)});
   $('csv').addEventListener('click',function(){
     fetch('/api/leads?format=csv',{headers:auth()}).then(function(r){if(!r.ok)throw 0;return r.blob()}).then(function(b){
       var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='cadastros.csv';document.body.appendChild(a);a.click();a.remove();

@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /api/
+Disallow: /pagar.html
+Disallow: /pagamento.html
+Sitemap: https://resolvoja.app.br/sitemap.xml

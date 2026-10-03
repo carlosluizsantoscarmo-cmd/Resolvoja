@@ -24,12 +24,12 @@ a{color:var(--brand)}
 </div>
 <script>
 (function(){
-  var q=new URLSearchParams(location.search),id=q.get('pedido')||'',tries=0;
+  var q=new URLSearchParams(location.search),id=q.get('pedido')||'',pay=(q.get('payment_id')||q.get('collection_id')||'').replace(/\D/g,''),tries=0;
   var t=document.getElementById('t'),p=document.getElementById('p');
   function show(h,msg,color){t.textContent=h;p.textContent=msg;t.style.color=color||''}
   // O status da URL pode ser alterado por qualquer pessoa; só o servidor (que recebeu o aviso do Mercado Pago) vale.
   function check(){
-    fetch('/api/pedido?id='+encodeURIComponent(id)).then(function(r){return r.ok?r.json():Promise.reject()}).then(function(d){
+    fetch('/api/pedido?id='+encodeURIComponent(id)+(pay?'&payment_id='+encodeURIComponent(pay):'')).then(function(r){return r.ok?r.json():Promise.reject()}).then(function(d){
       if(d.status==='paid'){show('Pagamento confirmado','Obrigado! Vamos falar com você pelo e-mail informado.','var(--ok)');return}
       if(d.status==='rejected'||d.status==='cancelled'){show('Pagamento não aprovado','O Mercado Pago não aprovou. Você pode tentar de novo.','var(--err)');p.innerHTML+=' <a href="/pagar.html">Tentar de novo</a>';return}
       if(++tries<8){setTimeout(check,3000);return}

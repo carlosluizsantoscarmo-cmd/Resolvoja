@@ -8,6 +8,9 @@
 <meta property="og:title" content="Resolvo Já">
 <meta property="og:description" content="Descreva o serviço, receba propostas e contrate com segurança. Piloto na Serra, ES.">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://resolvoja.carlosluiz-santoscarmo.workers.dev/og.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#1F3BD1">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231F3BD1'/%3E%3Ctext x='32' y='44' font-size='34' font-weight='800' text-anchor='middle' fill='%23FFC400' font-family='Arial'%3ERJ%3C/text%3E%3C/svg%3E">
 </head>
@@ -110,6 +113,17 @@ section.alt{background:var(--surface)}
 .cats .place{font-size:15px}
 .cats .place.soon{color:var(--muted);border-style:dashed}
 
+/* perguntas frequentes */
+.faq{max-width:760px;margin-inline:auto;display:grid;gap:10px}
+.faq details{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:0 18px}
+.alt .faq details{background:var(--bg)}
+.faq summary{cursor:pointer;font:700 18px var(--f-body);padding:16px 0;list-style:none;display:flex;justify-content:space-between;gap:12px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font:700 24px var(--f-body);color:var(--brand);line-height:1}
+.faq details[open] summary::after{content:"\2212"}
+.faq details p{color:var(--muted);padding:0 0 16px}
+.faq a{color:var(--brand)}
+
 /* formulário */
 .form-card{background:var(--surface);border:1px solid var(--line);border-radius:26px;padding:28px;max-width:720px;margin-inline:auto;box-shadow:0 14px 40px rgba(18,26,58,.08)}
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--bg);padding:4px;border-radius:14px;margin-bottom:22px}
@@ -167,6 +181,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
    <span class="sp"></span>
    <a class="l" href="#como">Como funciona</a>
    <a class="l" href="#profissionais">Para profissionais</a>
+   <a class="l" href="#faq">Perguntas</a>
    <a class="btn sun" style="padding:10px 16px;font-size:15px" href="#cadastro">Entrar na lista</a>
   </nav>
   <div class="hero-grid" id="topo">
@@ -222,7 +237,8 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
    <div class="mrow"><span>Serviço de montagem</span><b>R$ 180,00</b></div>
    <div class="mrow"><span>Comissão do Resolvo Já (10%)</span><b>− R$ 18,00</b></div>
    <div class="mrow total"><span>Você recebe</span><b>R$ 162,00</b></div>
-   <small>A comissão é cobrada só quando o serviço é contratado e pago pelo app. Cadastrar e receber pedidos não custa nada no piloto. Exemplo para ilustrar o cálculo.</small>
+   <small>A comissão é cobrada só quando o serviço é contratado e pago pelo app. Entrar na lista é grátis. Exemplo para ilustrar o cálculo.</small>
+   <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line)"><b style="display:block;font-size:18px">Profissional verificado</b><p style="color:var(--muted);margin:4px 0 12px;font-size:15.5px">Taxa única de <b>R$ 29,90</b>, opcional, para conferirmos seus dados e liberarmos o selo no app. Você tem 7 dias para desistir e receber o reembolso. A taxa não garante pedidos.</p><a class="btn" href="/pagar.html" style="width:100%">Quero ser verificado</a></div>
   </div>
  </div>
 </section>
@@ -288,10 +304,24 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
 
  </div>
 </section>
+<section id="faq">
+ <div class="wrap">
+  <div class="sec-h" style="margin-inline:auto;text-align:center"><h2>Perguntas frequentes</h2><p>O que a maioria quer saber antes de entrar.</p></div>
+  <div class="faq">
+   <details><summary>Quanto custa para quem contrata?</summary><p>Entrar na lista e pedir propostas não custa nada. Você paga apenas o serviço que decidir contratar, pelo aplicativo.</p></details>
+   <details><summary>Quanto custa para o profissional?</summary><p>Entrar na lista é grátis. Quando o app abrir, o Resolvo Já fica com 10% de cada serviço contratado e pago pelo app, e você recebe o resto. A verificação do perfil é opcional e custa R$ 29,90, uma única vez.</p></details>
+   <details><summary>O que é a verificação de profissional?</summary><p>Conferimos seus dados cadastrais e, quando o app estiver disponível, você recebe o selo "Profissional verificado". Ela ajuda a passar confiança, mas não garante a quantidade de pedidos.</p></details>
+   <details><summary>Posso pedir o dinheiro de volta?</summary><p>Sim. Você tem 7 dias corridos depois do pagamento para desistir e receber o reembolso integral. Veja os <a href="/termos.html">Termos e reembolso</a>.</p></details>
+   <details><summary>Quando o aplicativo abre?</summary><p>O piloto começa por poucos bairros da Serra. Quem está na lista é avisado pelo WhatsApp antes de todo mundo.</p></details>
+   <details><summary>Meus dados estão seguros?</summary><p>Usamos seus dados só para falar sobre o piloto e você pode pedir a exclusão quando quiser. Pagamentos são feitos no Mercado Pago, e não guardamos dados de cartão. Leia a <a href="/privacidade.html">Política de Privacidade</a>.</p></details>
+   <details><summary>Onde vocês atendem?</summary><p>Começamos na Serra e na Grande Vitória, ES, e crescemos conforme houver profissionais disponíveis em cada região.</p></details>
+  </div>
+ </div>
+</section>
 </main>
 
 <footer>
- <div class="wrap"><span><b>Resolvo Já</b> · Conectando quem precisa com quem sabe fazer.</span><span><a href="/privacidade.html" style="color:inherit">Política de Privacidade</a> · Serra, Espírito Santo</span></div>
+ <div class="wrap"><span><b>Resolvo Já</b> · Conectando quem precisa com quem sabe fazer.</span><span><a href="/termos.html" style="color:inherit">Termos e reembolso</a> · <a href="/privacidade.html" style="color:inherit">Política de Privacidade</a> · Serra, Espírito Santo</span></div>
 </footer>
 
 <script>

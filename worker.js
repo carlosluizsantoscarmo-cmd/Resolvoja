@@ -186,6 +186,7 @@ const brl = (cents) => "R$ " + (cents / 100).toFixed(2).replace(".", ",");
 // POST /api/mp-webhook recebe o aviso do Mercado Pago, confere a assinatura, consulta o pagamento e só então marca como pago.
 // GET  /api/pedido?id= devolve só o status de um pedido (para a página de retorno).
 // GET  /api/pedidos    lista os pedidos (equipe, com ADMIN_TOKEN).
+// DELETE /api/pedidos?id= apaga um pedido (equipe).
 // Segredos no Cloudflare: MP_ACCESS_TOKEN e MP_WEBHOOK_SECRET. O preço vem sempre daqui, nunca do navegador.
 const CATALOGO = {
   "cadastro-pro": { titulo: "Verificação de profissional - Resolvo Já", cents: 2990 }, // EXEMPLO: R$ 29,90. Ajuste.
@@ -369,6 +370,16 @@ async function pedidoGet({ request, env, ctx }) {
   return json(200, { status: o.status }); // só o status; nada de dados pessoais
 }
 
+async function pedidosDelete({ request, env }) {
+  if (!env.LEADS) return json(500, { error: "Servidor sem armazenamento configurado." });
+  const a = await authorized(request, env);
+  if (a !== "ok") return deny(a);
+  const id = new URL(request.url).searchParams.get("id") || "";
+  if (!UUID.test(id)) return json(400, { error: "Pedido inválido." });
+  await env.LEADS.delete(orderKey(id));
+  return json(200, { ok: true });
+}
+
 async function pedidosGet({ request, env }) {
   if (!env.LEADS) return json(500, { error: "Servidor sem armazenamento configurado." });
   const a = await authorized(request, env);
@@ -401,7 +412,11 @@ export default {
     if (pathname === "/api/checkout") return request.method === "POST" ? checkoutPost({ request, env }) : json(405, { error: "Método não permitido." }, { Allow: "POST" });
     if (pathname === "/api/mp-webhook") return request.method === "POST" ? mpWebhook({ request, env, ctx }) : json(405, { error: "Método não permitido." }, { Allow: "POST" });
     if (pathname === "/api/pedido") return request.method === "GET" ? pedidoGet({ request, env, ctx }) : json(405, { error: "Método não permitido." }, { Allow: "GET" });
-    if (pathname === "/api/pedidos") return request.method === "GET" ? pedidosGet({ request, env }) : json(405, { error: "Método não permitido." }, { Allow: "GET" });
+    if (pathname === "/api/pedidos") {
+      if (request.method === "GET") return pedidosGet({ request, env });
+      if (request.method === "DELETE") return pedidosDelete({ request, env });
+      return json(405, { error: "Método não permitido." }, { Allow: "GET, DELETE" });
+    }
     if (pathname.startsWith("/api/")) return json(404, { error: "Não encontrado." });
     return env.ASSETS.fetch(request);
   },

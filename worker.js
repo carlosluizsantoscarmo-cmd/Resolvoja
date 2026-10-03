@@ -33,7 +33,7 @@ const CITIES = ["Serra", "Vitória", "Vila Velha", "Cariacica", "Outra"];
 const EXPERIENCE = ["Menos de 1 ano", "1 a 3 anos", "3 a 10 anos", "Mais de 10 anos"];
 const clean = (v, max) => (typeof v === "string" ? v.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max) : "");
 
-async function leadPost({ request, env }) {
+async function leadPost({ request, env, ctx }) {
   if (!env.LEADS) return json(500, { error: "Servidor sem armazenamento configurado." });
 
   // Aceita só o próprio site (ou a prévia do Pages). Pedidos sem Origin (curl) passam; o resto dos filtros vale igual.
@@ -76,7 +76,15 @@ async function leadPost({ request, env }) {
     criadoEm: new Date().toISOString(),
   };
   // A chave é o telefone: quem envia duas vezes atualiza o próprio cadastro, sem duplicar.
-  await env.LEADS.put(`lead:${tipo}:${digits}`, JSON.stringify(rec));
+  const leadKey = `lead:${tipo}:${digits}`;
+  const jaExistia = await env.LEADS.get(leadKey);
+  await env.LEADS.put(leadKey, JSON.stringify(rec));
+  if (!jaExistia) {
+    notifyOwner(env, ctx, `Novo cadastro: ${tipo === "pro" ? "profissional" : "cliente"} - ${nome}`,
+      `Tipo: ${tipo === "pro" ? "profissional" : "cliente"}\nNome: ${nome}\nWhatsApp: ${whatsapp}\nLocal: ${bairro}, ${cidade}` +
+      (categorias.length ? `\nCategorias: ${categorias.join(", ")}` : "") + (rec.obs ? `\nObs.: ${rec.obs}` : "") +
+      "\n\nVeja todos em /admin.html");
+  }
   return json(200, { ok: true });
 }
 
@@ -146,6 +154,33 @@ async function leadsOther() {
   return json(405, { error: "Método não permitido." }, { Allow: "GET, DELETE" });
 }
 
+// ---- Avisos por e-mail (Resend) ----
+// Secrets/variáveis opcionais: RESEND_API_KEY (Secret), NOTIFY_EMAIL (e-mail que recebe os avisos),
+// MAIL_FROM (remetente de um domínio verificado no Resend; sem ele não enviamos confirmação ao comprador).
+// Sem RESEND_API_KEY nada é enviado e o site funciona igual.
+async function sendMail(env, { to, subject, text, from }) {
+  if (!env.RESEND_API_KEY || !to) return false;
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: from || env.MAIL_FROM || "Resolvo Já <onboarding@resend.dev>", to: [to], subject, text }),
+    });
+    if (!r.ok) console.error("e-mail recusado pelo Resend:", r.status);
+    return r.ok;
+  } catch (e) {
+    console.error("falha ao enviar e-mail:", e && e.message);
+    return false;
+  }
+}
+// Avisa a equipe sem atrasar a resposta ao visitante.
+function notifyOwner(env, ctx, subject, text) {
+  const p = sendMail(env, { to: env.NOTIFY_EMAIL, subject, text });
+  if (ctx && ctx.waitUntil) ctx.waitUntil(p);
+  return p;
+}
+const brl = (cents) => "R$ " + (cents / 100).toFixed(2).replace(".", ",");
+
 // ---- Pagamentos (Mercado Pago, Checkout Pro) ----
 // POST /api/checkout   cria o pedido no KV e uma preferência no Mercado Pago; devolve o link de pagamento.
 // POST /api/mp-webhook recebe o aviso do Mercado Pago, confere a assinatura, consulta o pagamento e só então marca como pago.
@@ -153,7 +188,7 @@ async function leadsOther() {
 // GET  /api/pedidos    lista os pedidos (equipe, com ADMIN_TOKEN).
 // Segredos no Cloudflare: MP_ACCESS_TOKEN e MP_WEBHOOK_SECRET. O preço vem sempre daqui, nunca do navegador.
 const CATALOGO = {
-  "cadastro-pro": { titulo: "Taxa de cadastro de profissional - Resolvo Já", cents: 2990 }, // EXEMPLO: R$ 29,90. Ajuste.
+  "cadastro-pro": { titulo: "Verificação de profissional - Resolvo Já", cents: 2990 }, // EXEMPLO: R$ 29,90. Ajuste.
 };
 const MP_API = "https://api.mercadopago.com";
 const ORDER_TTL = 60 * 60 * 24 * 180;
@@ -235,7 +270,7 @@ async function mpSignatureValid({ secret, signature, requestId, dataId, now = Da
   return tokenMatches(String(parts.v1), expected);
 }
 
-async function mpWebhook({ request, env }) {
+async function mpWebhook({ request, env, ctx }) {
   if (!env.LEADS || !env.MP_ACCESS_TOKEN || !env.MP_WEBHOOK_SECRET) return json(503, { error: "Webhook não configurado." });
   const url = new URL(request.url);
   let body = null;
@@ -256,24 +291,26 @@ async function mpWebhook({ request, env }) {
     console.error("Falha ao consultar o pagamento:", e && e.message);
     return json(500, { error: "tente de novo" }); // 5xx: o Mercado Pago reenvia
   }
-  const r2 = await applyPayment(env, payment);
+  const r2 = await applyPayment(env, payment, ctx);
   console.log("webhook", JSON.stringify({ dataId: String(dataId), mpStatus: payment.status, resultado: r2.reason }));
   return json(200, { ok: true });
 }
 
 // Confere um pagamento (já consultado na API do Mercado Pago) contra o pedido e atualiza o status. Nunca confia no navegador.
-async function applyPayment(env, payment) {
+async function applyPayment(env, payment, ctx) {
   const ref = String(payment.external_reference || "");
   if (!UUID.test(ref)) return { reason: "sem-referencia" };
   const order = await env.LEADS.get(orderKey(ref), "json");
   if (!order) return { reason: "pedido-desconhecido" };
 
+  let primeiraVez = false;
   if (payment.status === "approved") {
     const paidCents = Math.round(Number(payment.transaction_amount) * 100);
     if (payment.currency_id !== "BRL" || paidCents !== order.totalCents) {
       console.error(`Valor ou moeda não confere no pedido ${order.id}: pago ${paidCents} ${payment.currency_id}, esperado ${order.totalCents}`);
       return { reason: "valor-nao-confere" }; // não libera; conferir à mão
     }
+    primeiraVez = order.status !== "paid";
     order.status = "paid";
     order.paidAt = order.paidAt || new Date().toISOString();
   } else if (order.status !== "paid") {
@@ -283,6 +320,18 @@ async function applyPayment(env, payment) {
   }
   order.paymentId = payment.id;
   await env.LEADS.put(orderKey(order.id), JSON.stringify(order), { expirationTtl: ORDER_TTL });
+  if (primeiraVez) {
+    const titulo = (CATALOGO[order.item] && CATALOGO[order.item].titulo) || order.item;
+    notifyOwner(env, ctx, `Pagamento confirmado: ${brl(order.totalCents)} - ${order.nome}`,
+      `${titulo}\nValor: ${brl(order.totalCents)}\nNome: ${order.nome}\nE-mail: ${order.email}\nPedido: ${order.id}\nPagamento no Mercado Pago: ${payment.id}`);
+    // Confirmação ao comprador: só com remetente de domínio verificado (MAIL_FROM).
+    if (env.MAIL_FROM) {
+      const p = sendMail(env, { to: order.email, subject: "Pagamento confirmado - Resolvo Já",
+        text: `Olá, ${order.nome}!\n\nRecebemos o seu pagamento de ${brl(order.totalCents)} (${titulo}).\nPedido: ${order.id}\n\n` +
+              `Você tem 7 dias para desistir e pedir o reembolso integral, respondendo este e-mail. Mais detalhes em /termos.html.\n\nResolvo Já` });
+      if (ctx && ctx.waitUntil) ctx.waitUntil(p);
+    }
+  }
   return { reason: "ok:" + order.status, order };
 }
 
@@ -292,7 +341,7 @@ async function fetchPayment(env, paymentId) {
   return r.json();
 }
 
-async function pedidoGet({ request, env }) {
+async function pedidoGet({ request, env, ctx }) {
   if (!env.LEADS) return json(500, { error: "Servidor sem armazenamento configurado." });
   const q = new URL(request.url).searchParams;
   const id = q.get("id") || "";
@@ -307,7 +356,7 @@ async function pedidoGet({ request, env }) {
     try {
       const payment = await fetchPayment(env, pid);
       if (String(payment.external_reference) === id) {
-        const r = await applyPayment(env, payment);
+        const r = await applyPayment(env, payment, ctx);
         console.log("retorno", JSON.stringify({ mpStatus: payment.status, resultado: r.reason }));
         if (r.order) o = r.order;
       } else {
@@ -339,10 +388,10 @@ async function pedidosGet({ request, env }) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const { pathname } = new URL(request.url);
     if (pathname === "/api/lead") {
-      return request.method === "POST" ? leadPost({ request, env }) : leadOther({ request, env });
+      return request.method === "POST" ? leadPost({ request, env, ctx }) : leadOther({ request, env });
     }
     if (pathname === "/api/leads") {
       if (request.method === "GET") return leadsGet({ request, env });
@@ -350,8 +399,8 @@ export default {
       return leadsOther({ request, env });
     }
     if (pathname === "/api/checkout") return request.method === "POST" ? checkoutPost({ request, env }) : json(405, { error: "Método não permitido." }, { Allow: "POST" });
-    if (pathname === "/api/mp-webhook") return request.method === "POST" ? mpWebhook({ request, env }) : json(405, { error: "Método não permitido." }, { Allow: "POST" });
-    if (pathname === "/api/pedido") return request.method === "GET" ? pedidoGet({ request, env }) : json(405, { error: "Método não permitido." }, { Allow: "GET" });
+    if (pathname === "/api/mp-webhook") return request.method === "POST" ? mpWebhook({ request, env, ctx }) : json(405, { error: "Método não permitido." }, { Allow: "POST" });
+    if (pathname === "/api/pedido") return request.method === "GET" ? pedidoGet({ request, env, ctx }) : json(405, { error: "Método não permitido." }, { Allow: "GET" });
     if (pathname === "/api/pedidos") return request.method === "GET" ? pedidosGet({ request, env }) : json(405, { error: "Método não permitido." }, { Allow: "GET" });
     if (pathname.startsWith("/api/")) return json(404, { error: "Não encontrado." });
     return env.ASSETS.fetch(request);

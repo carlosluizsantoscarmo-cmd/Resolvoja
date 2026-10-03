@@ -52,5 +52,6 @@ Se você trocar o domínio, ajuste `ALLOWED_ORIGINS` (no painel do Cloudflare ou
 ## Para desenvolver no computador
 `npm run dev` sobe o site local com um KV de teste (token de teste: `troque-por-um-token-longo-123`; precisa do Node.js). `npm test` roda os testes das funções.
 
+
 ## E a loja com o botão do Mercado Pago?
 Ela é um servidor Node e **não roda no Cloudflare Pages como está**. Publique-a à parte (Render ou Railway) em um subdomínio, como `loja.resolvoja.app.br`: no Cloudflare, crie um registro CNAME `loja` apontando para o endereço que a plataforma indicar.

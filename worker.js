@@ -246,28 +246,33 @@ async function mpWebhook({ request, env }) {
     secret: env.MP_WEBHOOK_SECRET, signature: request.headers.get("x-signature"),
     requestId: request.headers.get("x-request-id"), dataId,
   });
-  if (!valid) return json(401, { error: "assinatura inválida" });
+  if (!valid) { console.error("webhook: assinatura inválida", JSON.stringify({ temAssinatura: !!request.headers.get("x-signature"), temRequestId: !!request.headers.get("x-request-id"), dataId: dataId ? String(dataId) : null, type })); return json(401, { error: "assinatura inválida" }); }
   if (type !== "payment") return json(200, { ok: true, ignorado: true });
 
   let payment;
   try {
-    const r = await fetch(`${MP_API}/v1/payments/${encodeURIComponent(String(dataId))}`, { headers: { Authorization: "Bearer " + env.MP_ACCESS_TOKEN } });
-    if (!r.ok) throw new Error("status " + r.status);
-    payment = await r.json();
+    payment = await fetchPayment(env, dataId);
   } catch (e) {
     console.error("Falha ao consultar o pagamento:", e && e.message);
     return json(500, { error: "tente de novo" }); // 5xx: o Mercado Pago reenvia
   }
+  const r2 = await applyPayment(env, payment);
+  console.log("webhook", JSON.stringify({ dataId: String(dataId), mpStatus: payment.status, resultado: r2.reason }));
+  return json(200, { ok: true });
+}
+
+// Confere um pagamento (já consultado na API do Mercado Pago) contra o pedido e atualiza o status. Nunca confia no navegador.
+async function applyPayment(env, payment) {
   const ref = String(payment.external_reference || "");
-  if (!UUID.test(ref)) return json(200, { ok: true, desconhecido: true });
+  if (!UUID.test(ref)) return { reason: "sem-referencia" };
   const order = await env.LEADS.get(orderKey(ref), "json");
-  if (!order) return json(200, { ok: true, desconhecido: true });
+  if (!order) return { reason: "pedido-desconhecido" };
 
   if (payment.status === "approved") {
     const paidCents = Math.round(Number(payment.transaction_amount) * 100);
     if (payment.currency_id !== "BRL" || paidCents !== order.totalCents) {
       console.error(`Valor ou moeda não confere no pedido ${order.id}: pago ${paidCents} ${payment.currency_id}, esperado ${order.totalCents}`);
-      return json(200, { ok: true, valorNaoConfere: true }); // não libera; conferir à mão
+      return { reason: "valor-nao-confere" }; // não libera; conferir à mão
     }
     order.status = "paid";
     order.paidAt = order.paidAt || new Date().toISOString();
@@ -278,15 +283,40 @@ async function mpWebhook({ request, env }) {
   }
   order.paymentId = payment.id;
   await env.LEADS.put(orderKey(order.id), JSON.stringify(order), { expirationTtl: ORDER_TTL });
-  return json(200, { ok: true });
+  return { reason: "ok:" + order.status, order };
+}
+
+async function fetchPayment(env, paymentId) {
+  const r = await fetch(`${MP_API}/v1/payments/${encodeURIComponent(String(paymentId))}`, { headers: { Authorization: "Bearer " + env.MP_ACCESS_TOKEN } });
+  if (!r.ok) throw new Error("status " + r.status);
+  return r.json();
 }
 
 async function pedidoGet({ request, env }) {
   if (!env.LEADS) return json(500, { error: "Servidor sem armazenamento configurado." });
-  const id = new URL(request.url).searchParams.get("id") || "";
+  const q = new URL(request.url).searchParams;
+  const id = q.get("id") || "";
   if (!UUID.test(id)) return json(400, { error: "Pedido inválido." });
-  const o = await env.LEADS.get(orderKey(id), "json");
+  let o = await env.LEADS.get(orderKey(id), "json");
   if (!o) return json(404, { error: "Pedido não encontrado." });
+
+  // Na volta do Mercado Pago a URL traz payment_id. Confirmamos esse pagamento direto na API (o navegador não decide nada):
+  // só vale se a referência externa for este pedido e o valor bater.
+  const pid = q.get("payment_id") || "";
+  if (o.status !== "paid" && /^\d{5,20}$/.test(pid) && env.MP_ACCESS_TOKEN) {
+    try {
+      const payment = await fetchPayment(env, pid);
+      if (String(payment.external_reference) === id) {
+        const r = await applyPayment(env, payment);
+        console.log("retorno", JSON.stringify({ mpStatus: payment.status, resultado: r.reason }));
+        if (r.order) o = r.order;
+      } else {
+        console.error("retorno: pagamento de outro pedido", pid);
+      }
+    } catch (e) {
+      console.error("retorno: falha ao consultar o pagamento:", e && e.message);
+    }
+  }
   return json(200, { status: o.status }); // só o status; nada de dados pessoais
 }
 

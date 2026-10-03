@@ -36,7 +36,8 @@ th{text-align:left;padding:10px;background:var(--bg);color:var(--muted)}td{paddi
   <div class="card" id="orders" style="margin-top:16px" hidden>
     <h2 style="font-size:19px;margin:0 0 4px">Pedidos e pagamentos</h2>
     <div id="ocount" style="color:var(--muted)"></div>
-    <div class="tw" id="otw" hidden><table style="min-width:680px"><thead><tr><th>Quando</th><th>Item</th><th>Nome</th><th>E-mail</th><th>Valor</th><th>Status</th><th>Pagamento (MP)</th></tr></thead><tbody id="orows"></tbody></table></div>
+    <label style="display:inline-flex;gap:8px;align-items:center;margin-top:8px;font-size:14px;color:var(--muted)"><input type="checkbox" id="hidepend" style="flex:none;min-width:0"> Ocultar pedidos pendentes (checkout aberto e não pago)</label>
+    <div class="tw" id="otw" hidden><table style="min-width:760px"><thead><tr><th>Quando</th><th>Item</th><th>Nome</th><th>E-mail</th><th>Valor</th><th>Status</th><th>Pagamento (MP)</th><th></th></tr></thead><tbody id="orows"></tbody></table></div>
   </div>
 </main>
 <script>
@@ -75,24 +76,36 @@ th{text-align:left;padding:10px;background:var(--bg);color:var(--muted)}td{paddi
   }
   var STATUS={paid:'Pago',pending:'Pendente',in_process:'Em análise',rejected:'Recusado',cancelled:'Cancelado',refunded:'Reembolsado',charged_back:'Contestado'};
   var ITEM={'cadastro-pro':'Verificação de profissional'};
+  var ORDERS=[];
+  function renderOrders(){
+    var hide=$('hidepend').checked;
+    var list=ORDERS.filter(function(o){return !(hide&&o.status==='pending')});
+    var pagos=ORDERS.filter(function(o){return o.status==='paid'});
+    var soma=pagos.reduce(function(t,o){return t+o.totalCents},0);
+    $('ocount').textContent=ORDERS.length?ORDERS.length+' pedido'+(ORDERS.length>1?'s':'')+' · '+pagos.length+' pago'+(pagos.length===1?'':'s')+' · R$ '+(soma/100).toFixed(2).replace('.',','):'Nenhum pedido ainda.';
+    $('otw').hidden=!list.length;
+    var body=$('orows');body.textContent='';
+    list.forEach(function(o){
+      var tr=document.createElement('tr');
+      tr.appendChild(td(new Date(o.criadoEm).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})));
+      tr.appendChild(td(ITEM[o.item]||o.item));tr.appendChild(td(o.nome));tr.appendChild(td(o.email));
+      tr.appendChild(td('R$ '+(o.totalCents/100).toFixed(2).replace('.',',')));
+      tr.appendChild(td(STATUS[o.status]||o.status));tr.appendChild(td(o.paymentId||''));
+      var c=document.createElement('td'),b=document.createElement('button');b.className='del';b.textContent='Excluir';
+      b.onclick=function(){
+        var aviso=o.status==='paid'?'ATENÇÃO: este pedido consta como PAGO. ':'';
+        if(!confirm(aviso+'Excluir o pedido de '+o.nome+' ('+(STATUS[o.status]||o.status)+')? Isso não pode ser desfeito e não estorna o pagamento no Mercado Pago.'))return;
+        fetch('/api/pedidos?id='+encodeURIComponent(o.id),{method:'DELETE',headers:auth()}).then(function(r){if(!r.ok)throw 0;return loadOrders()}).catch(function(){$('msg').textContent='Não foi possível excluir o pedido.'});
+      };
+      c.appendChild(b);tr.appendChild(c);body.appendChild(tr);
+    });
+  }
   function loadOrders(){
     return fetch('/api/pedidos',{headers:auth()}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){
-      $('orders').hidden=false;
-      var pagos=d.items.filter(function(o){return o.status==='paid'});
-      var soma=pagos.reduce(function(t,o){return t+o.totalCents},0);
-      $('ocount').textContent=d.total?d.total+' pedido'+(d.total>1?'s':'')+' · '+pagos.length+' pago'+(pagos.length===1?'':'s')+' · R$ '+(soma/100).toFixed(2).replace('.',','):'Nenhum pedido ainda.';
-      $('otw').hidden=!d.total;
-      var body=$('orows');body.textContent='';
-      d.items.forEach(function(o){
-        var tr=document.createElement('tr');
-        tr.appendChild(td(new Date(o.criadoEm).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})));
-        tr.appendChild(td(ITEM[o.item]||o.item));tr.appendChild(td(o.nome));tr.appendChild(td(o.email));
-        tr.appendChild(td('R$ '+(o.totalCents/100).toFixed(2).replace('.',',')));
-        tr.appendChild(td(STATUS[o.status]||o.status));tr.appendChild(td(o.paymentId||''));
-        body.appendChild(tr);
-      });
+      $('orders').hidden=false;ORDERS=d.items;renderOrders();
     }).catch(function(){});
   }
+  $('hidepend').addEventListener('change',renderOrders);
   $('f').addEventListener('submit',function(e){e.preventDefault();token=$('tk').value.trim();load().then(loadOrders)});
   $('csv').addEventListener('click',function(){
     fetch('/api/leads?format=csv',{headers:auth()}).then(function(r){if(!r.ok)throw 0;return r.blob()}).then(function(b){

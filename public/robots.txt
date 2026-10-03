@@ -2,3 +2,5 @@ User-agent: *
 Allow: /
 Disallow: /admin.html
 Disallow: /api/
+Disallow: /pagar.html
+Disallow: /pagamento.html

@@ -1,3 +1,4 @@
+import { mpHandle } from "./mp.js";
 // Site Resolvo Já — Worker único (tudo em um arquivo, para facilitar o envio ao GitHub).
 // As páginas vêm da pasta public (binding ASSETS); só os endereços /api/* passam por aqui.
 // Gerado a partir de functions/api/*.js; a pasta functions só é usada pelos testes.
@@ -519,6 +520,7 @@ export default {
       if (request.method === "DELETE") return leadsDelete({ request, env });
       return leadsOther({ request, env });
     }
+    if (pathname === "/api/mp-oauth/callback" || pathname === "/api/mp-split-webhook" || pathname.startsWith("/api/mp/")) return mpHandle(request, env);
     if (pathname === "/api/negociacao") return request.method === "POST" ? negociacaoPost({ request, env, ctx }) : json(405, { error: "Método não permitido." }, { Allow: "POST" });
     if (pathname === "/api/aviso") return request.method === "POST" ? avisoPost({ request, env, ctx }) : json(405, { error: "Método não permitido." }, { Allow: "POST" });
     if (pathname === "/api/checkout") return request.method === "POST" ? checkoutPost({ request, env }) : json(405, { error: "Método não permitido." }, { Allow: "POST" });

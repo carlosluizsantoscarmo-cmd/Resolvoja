@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node test/functions.test.mjs && node test/worker.test.mjs && node test/checkout.test.mjs && node test/turnstile.test.mjs && node test/negociacao.test.mjs && node test/aviso.test.mjs",
+    "test": "node test/functions.test.mjs && node test/worker.test.mjs && node test/checkout.test.mjs && node test/turnstile.test.mjs && node test/negociacao.test.mjs && node test/aviso.test.mjs && node test/mp.test.mjs",
     "dev": "wrangler dev --var ADMIN_TOKEN:troque-por-um-token-longo-123",
     "deploy": "wrangler deploy"
   }

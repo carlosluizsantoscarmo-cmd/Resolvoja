@@ -1,4 +1,6 @@
 (function () {
+  // Links de confirmação do e-mail que caírem na página inicial seguem para o app, com o código na URL.
+  if (/^#(access_token|error)=/.test(location.hash) && location.pathname === "/") { location.replace("/app/" + location.hash); return; }
   var RJ = window.RJ || {};
   var widgetId = null, token = "";
 

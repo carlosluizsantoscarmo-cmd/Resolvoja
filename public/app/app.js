@@ -33,7 +33,8 @@
     if (/failed to fetch|network/i.test(m)) return "Sem conexão. Confira a internet e tente de novo.";
     if (/row-level security|permission denied/i.test(m)) return "Sem permissão para essa ação.";
     if (/invalid/i.test(m) && /email/i.test(m)) return "O Supabase não aceitou este e-mail. Use um e-mail real (ex.: Gmail).";
-    if (/signups? (not allowed|are disabled)|disabled/i.test(m)) return "Novos cadastros estão desativados no Supabase (Authentication > Sign In / Providers).";
+    if (/signups? not allowed/i.test(m)) return "Novos cadastros estão desativados no Supabase (Authentication > Sign In / Providers > Allow new users to sign up).";
+    if (/email (signups?|provider|logins?) (is|are) disabled/i.test(m)) return "O cadastro por e-mail está desligado no Supabase (Authentication > Sign In / Providers > Email > Enable Email provider). (Detalhe técnico: " + m.slice(0, 120) + ")";
     try { console.error("Erro do app:", err); } catch (x) {}
     return "Não foi possível concluir agora. Tente de novo em instantes. (Detalhe técnico: " + m.slice(0, 160) + ")";
   }

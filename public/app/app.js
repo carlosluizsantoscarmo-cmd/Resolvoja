@@ -123,7 +123,7 @@
           if (!$("ok").checked) { btn.disabled = false; return bad("Marque a aceitação dos Termos e da Política de Privacidade."); }
           var role = document.querySelector('input[name="role"]:checked').value;
           try { localStorage.setItem("rj_pending", JSON.stringify({ email: email.toLowerCase(), role: role, name: nome, phone: tel })); } catch (x) {}
-          var s = await sb.auth.signUp({ email: email, password: senha, options: { data: { name: nome } } });
+          var s = await sb.auth.signUp({ email: email, password: senha, options: { data: { name: nome }, emailRedirectTo: location.origin + "/app/" } });
           if (s.error) throw s.error;
           if (!s.data.session) {
             plain('<div class="card"><h1>Confirme seu e-mail</h1><p>Enviamos uma mensagem para <b>' + e(email) + '</b>. Abra o link para ativar a conta e depois volte aqui para entrar.' + (role === "pro" ? " Ao entrar, você completa serviços, bairros e experiência." : "") + '</p><button class="full" id="vol" type="button">Ir para Entrar</button></div>');

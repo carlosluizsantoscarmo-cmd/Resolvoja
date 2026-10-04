@@ -29,7 +29,7 @@ async function tokenMatches(given, expected) {
 // POST /api/lead — recebe o cadastro da lista de espera e grava no Workers KV (binding LEADS).
 
 const CATEGORIES = ["Eletricista", "Encanador", "Montador", "Pintor", "Diarista", "Fretes"];
-const CITIES = ["Serra", "Vitória", "Vila Velha", "Cariacica", "Outra"];
+const UFS = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 const EXPERIENCE = ["Menos de 1 ano", "1 a 3 anos", "3 a 10 anos", "Mais de 10 anos"];
 const clean = (v, max) => (typeof v === "string" ? v.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max) : "");
 
@@ -84,12 +84,14 @@ async function leadPost({ request, env, ctx }) {
   if (!bairro) return json(400, { error: "Informe o seu bairro." });
   if (b.lgpd !== true) return json(400, { error: "Marque a autorização para continuar." });
 
-  const cidade = CITIES.includes(b.cidade) ? b.cidade : "Outra";
+  const cidade = clean(b.cidade, 60);
+  const uf = UFS.includes(b.uf) ? b.uf : "ES";
+  if (!cidade) return json(400, { error: "Informe a sua cidade." });
   const categorias = Array.isArray(b.categorias) ? [...new Set(b.categorias.filter((c) => CATEGORIES.includes(c)))] : [];
   if (tipo === "pro" && categorias.length === 0) return json(400, { error: "Escolha pelo menos uma categoria." });
 
   const rec = {
-    tipo, nome, whatsapp, bairro, cidade, categorias,
+    tipo, nome, whatsapp, bairro, cidade, uf, categorias,
     obs: clean(b.obs, 500),
     experiencia: tipo === "pro" && EXPERIENCE.includes(b.experiencia) ? b.experiencia : null,
     lgpdAceitoEm: new Date().toISOString(),
@@ -101,7 +103,7 @@ async function leadPost({ request, env, ctx }) {
   await env.LEADS.put(leadKey, JSON.stringify(rec));
   if (!jaExistia) {
     notifyOwner(env, ctx, `Novo cadastro: ${tipo === "pro" ? "profissional" : "cliente"} - ${nome}`,
-      `Tipo: ${tipo === "pro" ? "profissional" : "cliente"}\nNome: ${nome}\nWhatsApp: ${whatsapp}\nLocal: ${bairro}, ${cidade}` +
+      `Tipo: ${tipo === "pro" ? "profissional" : "cliente"}\nNome: ${nome}\nWhatsApp: ${whatsapp}\nLocal: ${bairro}, ${cidade}/${uf}` +
       (categorias.length ? `\nCategorias: ${categorias.join(", ")}` : "") + (rec.obs ? `\nObs.: ${rec.obs}` : "") +
       "\n\nVeja todos em /admin.html");
   }
@@ -151,7 +153,7 @@ async function leadsGet({ request, env }) {
   items.sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""));
 
   if (new URL(request.url).searchParams.get("format") === "csv") {
-    const cols = ["criadoEm", "tipo", "nome", "whatsapp", "bairro", "cidade", "categorias", "experiencia", "obs"];
+    const cols = ["criadoEm", "tipo", "nome", "whatsapp", "bairro", "cidade", "uf", "categorias", "experiencia", "obs"];
     const csv = [cols.join(","), ...items.map((r) => cols.map((c) => csvCell(r[c])).join(","))].join("\r\n");
     return new Response("﻿" + csv, {
       headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": 'attachment; filename="cadastros.csv"', "Cache-Control": "no-store" },

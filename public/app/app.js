@@ -6,7 +6,7 @@
   var app = document.getElementById("app");
   var TERMS_VERSION = "2026-10-v1";
   var sb = null, user = null, profile = null, pro = null, proReady = false;
-  var cats = [], regions = [], timer = null, installEvt = null, proTab = "abertos";
+  var cats = [], regions = [], timer = null, installEvt = null;
 
   // ---------- utilidades ----------
   function e(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
@@ -45,21 +45,55 @@
   function stopTimer() { if (timer) { clearInterval(timer); timer = null; } }
   function go(h) { if (location.hash === h) route(); else location.hash = h; }
 
-  // ---------- estrutura da tela ----------
-  function shell(inner, tab) {
-    var isPro = profile && profile.role === "pro";
-    var nav = isPro
-      ? '<a href="#/" class="' + (tab === "home" ? "on" : "") + '">Início</a><a href="#/perfil" class="' + (tab === "perfil" ? "on" : "") + '">Perfil</a>'
-      : '<a href="#/" class="' + (tab === "home" ? "on" : "") + '">Meus pedidos</a><a href="#/novo" class="' + (tab === "novo" ? "on" : "") + '">Novo pedido</a><a href="#/perfil" class="' + (tab === "perfil" ? "on" : "") + '">Perfil</a>';
-    app.innerHTML = '<header class="top"><div class="logo">Resolvo <b>Já</b></div><span class="muted small">' + e(profile ? profile.name.split(" ")[0] : "") + "</span></header>" + inner +
-      '<nav class="bottom"><div class="in">' + nav + "</div></nav>";
+  // ---------- ícones e peças de tela ----------
+  var ICONS = {
+    home: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',
+    list: '<path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/>',
+    chat: '<path d="M4 5h16v11H9l-5 4z"/>',
+    user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+    bolt: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+    drop: '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+    wrench: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    back: '<path d="M15 5l-7 7 7 7"/>',
+    pin: '<path d="M12 21s7-6 7-11a7 7 0 0 0-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+    send: '<path d="M3 11l18-8-8 18-2-8z"/>',
+    check: '<path d="M5 12l5 5 9-10"/>',
+    star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" fill="currentColor"/>'
+  };
+  function icon(n, s) { s = s || 22; return '<svg class="ic" width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[n] || "") + "</svg>"; }
+  function catIcon(name) { var n = String(name || "").toLowerCase(); return /eletric/.test(n) ? "bolt" : /encan|hidr/.test(n) ? "drop" : "wrench"; }
+  function initials(n) { var p = String(n || "?").trim().split(/\s+/); return ((p[0] || "?").charAt(0) + (p[1] ? p[1].charAt(0) : "")).toUpperCase(); }
+  var AVC = ["", "g", "o", "p"];
+  function avatar(n, i) { return '<span class="av ' + AVC[(i || 0) % 4] + '" aria-hidden="true">' + e(initials(n)) + "</span>"; }
+  function topbar(title, back) {
+    return '<div class="topbar">' + (back ? '<a class="iconbtn" href="' + back + '" aria-label="Voltar">' + icon("back") + "</a>" : "") + "<h2>" + e(title) + "</h2></div>";
   }
-  function plain(inner) { app.innerHTML = '<header class="top"><div class="logo">Resolvo <b>Já</b></div></header>' + inner; }
+  function hashParts() {
+    var h = location.hash || "#/", i = h.indexOf("?");
+    return { path: i < 0 ? h : h.slice(0, i), q: new URLSearchParams(i < 0 ? "" : h.slice(i + 1)) };
+  }
+
+  // ---------- estrutura da tela ----------
+  function shell(inner, tab, head) {
+    var isPro = profile && profile.role === "pro";
+    var items = isPro
+      ? [["home", "#/", "Início", "home"], ["propostas", "#/propostas", "Propostas", "list"], ["msg", "#/mensagens", "Mensagens", "chat"], ["perfil", "#/perfil", "Perfil", "user"]]
+      : [["home", "#/", "Início", "home"], ["pedidos", "#/pedidos", "Pedidos", "list"], ["msg", "#/mensagens", "Mensagens", "chat"], ["perfil", "#/perfil", "Perfil", "user"]];
+    var nav = items.map(function (i) { return '<a href="' + i[1] + '" class="' + (tab === i[0] ? "on" : "") + '"' + (tab === i[0] ? ' aria-current="page"' : "") + ">" + icon(i[3]) + i[2] + "</a>"; }).join("");
+    var top = head || '<div class="topbar"><span class="logo">Resolvo <b>Já</b></span><span style="flex:1"></span><span class="muted small">' + e(profile ? profile.name.split(" ")[0] : "") + "</span></div>";
+    app.innerHTML = top + '<div class="pad">' + inner + '</div><nav class="bottom"><div class="in">' + nav + "</div></nav>";
+    try { window.scrollTo(0, 0); } catch (x) {}
+  }
+  function plain(inner, heroTitle, heroSub) {
+    app.innerHTML = '<div class="hero"><div class="hrow"><span class="logo">Resolvo <b>Já</b></span></div>' + (heroTitle ? "<h1>" + e(heroTitle) + "</h1>" + (heroSub ? '<p class="sub">' + e(heroSub) + "</p>" : "") : "") + '</div><div class="authbox">' + inner + "</div>";
+  }
   function loading() { app.innerHTML = '<p class="boot">Carregando…</p>'; }
 
   // ---------- telas de entrada ----------
   function screenConfig(msg) {
-    plain('<div class="card"><h1>App em preparação</h1><p class="muted">' + e(msg || "O aplicativo ainda não foi configurado.") + "</p></div>");
+    plain('<div class="card"><p class="muted" style="margin:0">' + e(msg || "O aplicativo ainda não foi configurado.") + "</p></div>", "App em preparação");
   }
 
   function installBlock() {
@@ -80,8 +114,6 @@
     mode = mode || "login";
     var signup = mode === "signup";
     plain(
-      '<h1>' + (signup ? "Criar conta" : "Entrar") + "</h1>" +
-      '<p class="muted">Peça serviços e receba propostas de profissionais perto de você.</p>' +
       '<div class="tabs"><button type="button" id="t1" class="' + (signup ? "" : "on") + '">Entrar</button><button type="button" id="t2" class="' + (signup ? "on" : "") + '">Criar conta</button></div>' +
       '<form class="card" id="f" novalidate>' +
       (signup
@@ -96,7 +128,8 @@
           '<p id="prohint" class="banner" hidden>Profissional: depois de criar a conta e entrar, você escolhe os <b>serviços</b>, os <b>bairros</b> e informa a <b>experiência</b> na próxima tela.</p>' +
       '<label style="font-weight:500;display:flex;gap:8px;align-items:flex-start;margin-top:16px"><input id="ok" type="checkbox" style="width:auto;margin-top:4px"><span>Li e aceito os <a href="/termos.html" target="_blank" rel="noopener">Termos</a> e a <a href="/privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>.</span></label>'
         : "") +
-      '<div id="err"></div><button class="full" id="go" type="submit">' + (signup ? "Criar conta" : "Entrar") + "</button></form>" + installBlock()
+      '<div id="err"></div><button class="full" id="go" type="submit">' + (signup ? "Criar conta" : "Entrar") + "</button></form>" + installBlock(),
+      signup ? "Criar conta" : "Entrar", "Peça serviços e receba propostas de profissionais perto de você."
     );
     bindInstall();
     Array.prototype.forEach.call(document.querySelectorAll('input[name="role"]'), function (r) {
@@ -126,7 +159,7 @@
           var s = await sb.auth.signUp({ email: email, password: senha, options: { data: { name: nome }, emailRedirectTo: location.origin + "/app/" } });
           if (s.error) throw s.error;
           if (!s.data.session) {
-            plain('<div class="card"><h1>Confirme seu e-mail</h1><p>Enviamos uma mensagem para <b>' + e(email) + '</b>. Abra o link para ativar a conta e depois volte aqui para entrar.' + (role === "pro" ? " Ao entrar, você completa serviços, bairros e experiência." : "") + '</p><button class="full" id="vol" type="button">Ir para Entrar</button></div>');
+            plain('<div class="card"><p>Enviamos uma mensagem para <b>' + e(email) + '</b>. Abra o link para ativar a conta e depois volte aqui para entrar.' + (role === "pro" ? " Ao entrar, você completa serviços, bairros e experiência." : "") + '</p><button class="full" id="vol" type="button">Ir para Entrar</button></div>', "Confirme seu e-mail");
             $("vol").onclick = function () { screenAuth("login"); };
           }
         }
@@ -136,11 +169,11 @@
 
   // ---------- cadastro básico / profissional ----------
   function screenBasicProfile() {
-    plain('<h1>Complete seu cadastro</h1><form class="card" id="f" novalidate>' +
+    plain('<form class="card" id="f" novalidate>' +
       '<label for="nome">Nome completo</label><input id="nome" maxlength="100" autocomplete="name">' +
       '<label for="tel">WhatsApp com DDD</label><input id="tel" type="tel" maxlength="20" placeholder="(27) 9 0000-0000">' +
       '<label>Como você vai usar o app?</label><div class="chips"><label><input type="radio" name="role" value="client" checked> Quero contratar</label><label><input type="radio" name="role" value="pro"> Sou profissional</label></div>' +
-      '<div id="err"></div><button class="full" id="go" type="submit">Continuar</button></form>');
+      '<div id="err"></div><button class="full" id="go" type="submit">Continuar</button></form>', "Complete seu cadastro");
     $("f").onsubmit = async function (ev) {
       ev.preventDefault();
       var nome = $("nome").value.trim(), tel = $("tel").value.trim(), d = tel.replace(/\D/g, "");
@@ -162,15 +195,14 @@
     var c = await sb.from("categories").select("id,name").eq("active", true).order("name");
     var rg = await sb.from("regions").select("id,city,name").eq("active", true).order("city").order("name");
     cats = c.data || []; regions = rg.data || [];
-    plain('<h1>Cadastro de profissional</h1><p class="muted">Nossa equipe confere seus dados antes de liberar os pedidos. Você só aparece para clientes depois de aprovado.</p>' +
-      '<form class="card" id="f" novalidate>' +
+    plain('<form class="card" id="f" novalidate>' +
       '<label>O que você faz?</label><div class="chips">' + cats.map(function (x) { return '<label><input type="checkbox" name="cat" value="' + x.id + '"> ' + e(x.name) + "</label>"; }).join("") + "</div>" +
       '<label>Onde você atende?</label><div class="chips">' + regions.map(function (x) { return '<label><input type="checkbox" name="reg" value="' + x.id + '"> ' + e(x.name) + " (" + e(x.city) + ")</label>"; }).join("") + "</div>" +
       '<label for="exp">Anos de experiência</label><input id="exp" type="number" inputmode="numeric" min="0" max="70">' +
       '<label for="bio">Fale um pouco sobre seu trabalho</label><textarea id="bio" maxlength="600" placeholder="Ex.: Eletricista há 8 anos. Instalação de chuveiro, tomadas, quadro de luz."></textarea>' +
           '<label for="doc">Documento com foto (RG ou CNH)</label><input id="doc" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"><p class="muted small">Foto nítida ou PDF, até 5 MB. Só a equipe do Resolvo Já vê este arquivo, para confirmar quem você é. Ele não aparece para clientes.</p>' +
       '<label style="font-weight:500;display:flex;gap:8px;align-items:flex-start;margin-top:16px"><input id="ok" type="checkbox" style="width:auto;margin-top:4px"><span>Li e aceito os <a href="/termos.html" target="_blank" rel="noopener">Termos</a>, inclusive a taxa de verificação de R$ 29,90 e a comissão de 10% sobre os serviços feitos pelo app.</span></label>' +
-      '<div id="err"></div><button class="full" id="go" type="submit">Enviar para análise</button></form>');
+      '<div id="err"></div><button class="full" id="go" type="submit">Enviar para análise</button></form>', "Cadastro de profissional", "Nossa equipe confere seus dados antes de liberar os pedidos. Você só aparece para clientes depois de aprovado.");
     $("f").onsubmit = async function (ev) {
       ev.preventDefault();
       function bad(m) { $("err").innerHTML = '<div class="banner err" role="alert">' + e(m) + "</div>"; }
@@ -257,16 +289,15 @@
     try {
       await loadMe();
       if (!profile) return screenBasicProfile();
-      if (profile.role === "admin") return shell('<div class="card"><h1>Conta da equipe</h1><p>Use o painel da equipe: <a href="/equipe/">abrir painel</a>.</p><button class="ghost full" id="out" type="button">Sair</button></div>', "perfil"), ($("out").onclick = signOut);
+      if (profile.role === "admin") return shell('<div class="card"><h2 style="margin-top:0">Conta da equipe</h2><p>Use o painel da equipe: <a href="/equipe/">abrir painel</a>.</p><button class="ghost full" id="out" type="button">Sair</button></div>', "perfil"), ($("out").onclick = signOut);
       if (profile.role === "pro" && (!pro || pro._incomplete)) return screenProSetup();
-      var h = location.hash || "#/", m;
+      var hp = hashParts(), h = hp.path, m;
       if (h === "#/perfil") return screenPerfil();
-      if (profile.role === "pro") {
-        if ((m = h.match(/^#\/pedido\/([0-9a-f-]{36})$/i))) return proRequest(m[1]);
-        return proHome();
-      }
-      if (h === "#/novo") return clientNew();
-      if ((m = h.match(/^#\/pedido\/([0-9a-f-]{36})$/i))) return clientRequest(m[1]);
+      if (h === "#/mensagens") return messagesList();
+      if ((m = h.match(/^#\/pedido\/([0-9a-f-]{36})$/i))) return profile.role === "pro" ? proRequest(m[1]) : clientRequest(m[1]);
+      if (profile.role === "pro") return h === "#/propostas" ? proProposals() : proHome();
+      if (h === "#/novo") return clientNew(hp.q);
+      if (h === "#/pedidos") return clientList();
       return clientHome();
     } catch (x) {
       shell('<div class="banner err" role="alert">' + e(friendly(x)) + '</div><button class="full" id="re" type="button">Tentar de novo</button>', "home");
@@ -279,17 +310,17 @@
   // ---------- perfil ----------
   function screenPerfil() {
     var isPro = profile.role === "pro";
-    shell('<h1>Perfil</h1><div class="card"><p><b>' + e(profile.name) + "</b><br><span class=\"muted\">" + e(user.email || "") + "<br>" + e(profile.phone || "") + "</span></p>" +
-      "<p>" + (isPro ? "Profissional " + (pro && pro.status === "approved" ? '<span class="pill ok">aprovado</span>' : pro && pro.status === "suspended" ? '<span class="pill err">suspenso</span>' : '<span class="pill warn">em análise</span>') : "Cliente") + "</p></div>" +
+    shell('<div class="card"><div class="row" style="justify-content:flex-start;gap:14px">' + avatar(profile.name, 0) + '<div><b>' + e(profile.name) + '</b><br><span class="muted small">' + e(user.email || "") + "<br>" + e(profile.phone || "") + "</span></div></div>" +
+      '<p style="margin:12px 0 0">' + (isPro ? "Profissional " + (pro && pro.status === "approved" ? '<span class="pill ok">aprovado</span>' : pro && pro.status === "suspended" ? '<span class="pill err">suspenso</span>' : '<span class="pill warn">em análise</span>') : "Cliente") + "</p></div>" +
       installBlock() +
       '<p class="small center muted" style="margin-top:18px"><a href="/termos.html" target="_blank" rel="noopener">Termos</a> · <a href="/privacidade.html" target="_blank" rel="noopener">Privacidade</a></p>' +
-      '<button class="danger full" id="out" type="button">Sair da conta</button>', "perfil");
+      '<button class="danger full" id="out" type="button">Sair da conta</button>', "perfil", topbar("Perfil"));
     $("out").onclick = signOut; bindInstall();
   }
 
   // ---------- chat ----------
   function chatBlock(requestId) {
-    return '<h2>Conversa</h2><div class="card"><div class="chat" id="chat" aria-live="polite"></div><form id="cf" class="row" style="margin-top:8px;align-items:stretch"><input id="cm" maxlength="500" placeholder="Escreva uma mensagem" aria-label="Mensagem"><button type="submit" style="flex:none">Enviar</button></form></div>';
+    return '<h2>Conversa</h2><div class="card"><div class="chat" id="chat" aria-live="polite"></div><form id="cf" class="cform"><input id="cm" maxlength="500" placeholder="Escreva uma mensagem" aria-label="Mensagem"><button type="submit" aria-label="Enviar">' + icon("send", 20) + "</button></form></div>";
   }
   async function chatLoad(requestId) {
     var r = await sb.from("messages").select("id,sender_id,body,created_at").eq("request_id", requestId).order("created_at");
@@ -310,8 +341,49 @@
     };
   }
 
+  // ---------- acompanhamento ----------
+  function stepsBlock(status) {
+    if (status === "cancelled" || status === "disputed") return "";
+    var labels = ["Pedido enviado", "Propostas dos profissionais", "Contratação e pagamento", "Serviço em andamento", "Concluído"];
+    var now = { open: 1, awaiting_payment: 2, hired: 3, completed: 5 }[status];
+    if (now == null) return "";
+    return "<h2>Acompanhamento</h2><div class=\"card\"><ol class=\"steps\">" + labels.map(function (l, i) {
+      var cls = i < now ? "done" : i === now ? "now" : "";
+      return '<li class="' + cls + '"><span class="sdot">' + (i < now ? icon("check", 14) : "") + "</span><span>" + e(l) + "</span></li>";
+    }).join("") + "</ol></div>";
+  }
+
+  // ---------- mensagens ----------
+  async function messagesList() {
+    var items = [];
+    if (profile.role === "pro") {
+      var m = await sb.from("proposals").select("request_id,status,service_requests(id,title,status,categories(name))").eq("pro_id", user.id);
+      (m.data || []).forEach(function (p) {
+        var s = p.service_requests;
+        if (!s || p.status === "rejected" || p.status === "withdrawn") return;
+        if (["open", "awaiting_payment", "hired"].indexOf(s.status) < 0) return;
+        items.push({ id: s.id, title: s.title, cat: s.categories ? s.categories.name : "", status: s.status });
+      });
+    } else {
+      var r = await sb.from("service_requests").select("id,title,status,categories(name)").in("status", ["open", "awaiting_payment", "hired"]).order("created_at", { ascending: false });
+      var list = r.data || [], cnt = {};
+      if (list.length) {
+        var pr = await sb.from("proposals").select("request_id,status").in("request_id", list.map(function (x) { return x.id; }));
+        (pr.data || []).forEach(function (p) { if (p.status !== "withdrawn") cnt[p.request_id] = (cnt[p.request_id] || 0) + 1; });
+      }
+      list.forEach(function (x) { if (x.status !== "open" || cnt[x.id]) items.push({ id: x.id, title: x.title, cat: x.categories ? x.categories.name : "", status: x.status }); });
+    }
+    shell(items.length ? '<p class="muted small">Toque em um pedido para abrir a conversa com a outra pessoa.</p>' + items.map(function (x) {
+      return '<a class="card reqcard" href="#/pedido/' + x.id + '"><span class="ico">' + icon("chat", 22) + '</span><div class="t"><b>' + e(x.title) + '</b><span class="muted small">' + e(x.cat) + "</span><span style=\"display:block;margin-top:6px\">" + pill(STATUS, x.status) + "</span></div></a>";
+    }).join("") : '<div class="empty">Nenhuma conversa ainda.<br>Elas aparecem aqui quando houver propostas em um pedido.</div>', "msg", topbar("Mensagens"));
+  }
+
   // ---------- cliente ----------
-  async function clientHome() {
+  function reqCard(x, n) {
+    var ci = catIcon(x.categories ? x.categories.name : "");
+    return '<a class="card reqcard" href="#/pedido/' + x.id + '"><span class="ico">' + icon(ci, 22) + '</span><div class="t"><b>' + e(x.title) + '</b><span class="muted small">' + e(x.categories ? x.categories.name : "") + " · " + dt(x.created_at) + (x.status === "open" ? " · " + (n ? n + " proposta" + (n > 1 ? "s" : "") : "aguardando propostas") : "") + "</span><span style=\"display:block;margin-top:6px\">" + pill(STATUS, x.status) + "</span></div></a>";
+  }
+  async function clientRequests() {
     var r = await sb.from("service_requests").select("id,title,status,created_at,categories(name)").order("created_at", { ascending: false });
     if (r.error) throw r.error;
     var list = r.data || [], counts = {};
@@ -319,20 +391,45 @@
       var pr = await sb.from("proposals").select("request_id,status").in("request_id", list.map(function (x) { return x.id; }));
       (pr.data || []).forEach(function (p) { if (p.status === "sent") counts[p.request_id] = (counts[p.request_id] || 0) + 1; });
     }
-    shell("<h1>Meus pedidos</h1>" + (list.length ? list.map(function (x) {
-      var n = counts[x.id] || 0;
-      return '<a class="card" href="#/pedido/' + x.id + '"><div class="row"><b>' + e(x.title) + "</b>" + pill(STATUS, x.status) + '</div><div class="muted small">' + e(x.categories ? x.categories.name : "") + " · " + dt(x.created_at) + (x.status === "open" ? " · " + (n ? n + " proposta" + (n > 1 ? "s" : "") : "aguardando propostas") : "") + "</div></a>";
-    }).join("") : '<div class="empty">Você ainda não fez nenhum pedido.<br>Toque em <b>Novo pedido</b> para começar.</div>') +
-      '<a class="btn fab" href="#/novo">+ Novo pedido</a>', "home");
+    return { list: list, counts: counts };
   }
 
-  async function clientNew() {
+  async function clientHome() {
+    var d = await clientRequests(), list = d.list;
+    var c = await sb.from("categories").select("id,name").eq("active", true).order("name");
+    var quick = [["Chuveiro queimou", "eletric"], ["Torneira pingando", "encan"], ["Montar guarda-roupa", "montad"]];
+    var first = profile.name.split(" ")[0];
+    var head = '<div class="hero"><div class="hrow"><div><small>Serviço em</small><span class="loc">' + icon("pin", 18) + 'Serra, ES</span></div><span class="hello">Olá, ' + e(first) + "</span></div>" +
+      "<h1>O que você precisa resolver hoje?</h1>" +
+      '<form class="search" id="sf" role="search">' + icon("search", 20) + '<input id="sq" maxlength="80" placeholder="Ex.: chuveiro não esquenta" aria-label="Descreva o serviço"><button type="submit" class="slim">Buscar</button></form>' +
+      '<div class="chips-h">' + quick.map(function (q) { return '<a href="#/novo?t=' + encodeURIComponent(q[0]) + "&c=" + q[1] + '">' + e(q[0]) + "</a>"; }).join("") + "</div>" +
+      '<a class="btn sun full" href="#/novo">' + icon("plus", 20) + "Pedir orçamento</a></div>";
+    var cs = c.data || [];
+    var body = '<div class="section"><h2>Meus pedidos</h2>' + (list.length > 3 ? '<a href="#/pedidos">Ver todos</a>' : "") + "</div>" +
+      (list.length ? list.slice(0, 3).map(function (x) { return reqCard(x, d.counts[x.id] || 0); }).join("") : '<div class="empty">Você ainda não fez nenhum pedido.<br>Toque em <b>Pedir orçamento</b> para começar.</div>') +
+      (cs.length ? '<div class="section"><h2>Categorias</h2></div><div class="catgrid">' + cs.map(function (x) {
+        return '<a class="cat" href="#/novo?cid=' + x.id + '"><span class="ico">' + icon(catIcon(x.name), 24) + "</span>" + e(x.name) + "</a>";
+      }).join("") + "</div>" : "");
+    shell(body, "home", head);
+    $("sf").onsubmit = function (ev) { ev.preventDefault(); var q = $("sq").value.trim(); go("#/novo" + (q ? "?t=" + encodeURIComponent(q) : "")); };
+  }
+
+  async function clientList() {
+    var d = await clientRequests();
+    shell(d.list.length ? d.list.map(function (x) { return reqCard(x, d.counts[x.id] || 0); }).join("") : '<div class="empty">Você ainda não fez nenhum pedido.</div><a class="btn full" href="#/novo">Pedir orçamento</a>', "pedidos", topbar("Meus pedidos"));
+  }
+
+  async function clientNew(params) {
     var c = await sb.from("categories").select("id,name").eq("active", true).order("name");
     var rg = await sb.from("regions").select("id,city,name").eq("active", true).order("city").order("name");
     cats = c.data || []; regions = rg.data || [];
-    shell('<h1>Novo pedido</h1><p class="muted">Descreva o que você precisa. Profissionais da sua região enviam propostas.</p>' +
+    var preCat = "";
+    if (params && params.get("cid")) preCat = params.get("cid");
+    else if (params && params.get("c")) { var k = cats.filter(function (x) { return x.name.toLowerCase().indexOf(params.get("c").toLowerCase()) === 0; })[0]; if (k) preCat = String(k.id); }
+    var preTit = params && params.get("t") ? params.get("t").slice(0, 80) : "";
+    shell('<p class="muted">Descreva o que você precisa. Profissionais da sua região enviam propostas.</p>' +
       '<form class="card" id="f" novalidate>' +
-      '<label for="cat">Tipo de serviço</label><select id="cat"><option value="">Escolha…</option>' + cats.map(function (x) { return '<option value="' + x.id + '">' + e(x.name) + "</option>"; }).join("") + "</select>" +
+      '<label for="cat" style="margin-top:0">Tipo de serviço</label><select id="cat"><option value="">Escolha…</option>' + cats.map(function (x) { return '<option value="' + x.id + '">' + e(x.name) + "</option>"; }).join("") + "</select>" +
       '<label for="tit">Título curto</label><input id="tit" maxlength="80" placeholder="Ex.: Trocar chuveiro elétrico">' +
       '<label for="des">Descreva o serviço</label><textarea id="des" maxlength="1000" placeholder="O que precisa ser feito? Tem alguma urgência?"></textarea>' +
       '<label for="reg">Bairro</label><select id="reg"><option value="">Escolha…</option>' + regions.map(function (x) { return '<option value="' + x.id + '">' + e(x.name) + " — " + e(x.city) + "</option>"; }).join("") + "</select>" +
@@ -341,8 +438,10 @@
       '<div class="row" style="align-items:flex-start;gap:10px"><div style="flex:1"><label for="num">Número</label><input id="num" maxlength="12"></div><div style="flex:2"><label for="comp">Complemento</label><input id="comp" maxlength="60"></div></div>' +
       '<label for="dat">Data desejada (opcional)</label><input id="dat" type="date">' +
       '<label for="slot">Horário</label><select id="slot"><option value="flexivel">Flexível</option><option value="manha">Manhã</option><option value="tarde">Tarde</option><option value="noite">Noite</option></select>' +
-      '<div id="err"></div><button class="full" id="go" type="submit">Publicar pedido</button></form>', "novo");
+      '<div id="err"></div><button class="full" id="go" type="submit">Publicar pedido</button></form>', "home", topbar("Novo pedido", "#/"));
     $("dat").min = new Date().toISOString().slice(0, 10);
+    if (preCat) $("cat").value = preCat;
+    if (preTit) $("tit").value = preTit;
     $("f").onsubmit = async function (ev) {
       ev.preventDefault();
       function bad(m) { $("err").innerHTML = '<div class="banner err" role="alert">' + e(m) + "</div>"; }
@@ -367,7 +466,7 @@
   async function clientRequest(id) {
     var r = await sb.from("service_requests").select("*,categories(name)").eq("id", id).maybeSingle();
     if (r.error) throw r.error;
-    if (!r.data) return shell('<div class="empty">Pedido não encontrado.</div><a class="btn full" href="#/">Voltar</a>', "home");
+    if (!r.data) return shell('<div class="empty">Pedido não encontrado.</div><a class="btn full" href="#/pedidos">Voltar</a>', "pedidos", topbar("Pedido", "#/pedidos"));
     var q = r.data;
     var pr = await sb.from("proposals").select("*").eq("request_id", id).order("amount_cents");
     var props = pr.data || [], names = {};
@@ -375,16 +474,17 @@
       var pp = await sb.from("pro_public").select("id,name,bio,years_exp,rating_avg,rating_count").in("id", props.map(function (x) { return x.pro_id; }));
       (pp.data || []).forEach(function (x) { names[x.id] = x; });
     }
-    var html = '<p><a href="#/">← Meus pedidos</a></p><h1>' + e(q.title) + '</h1><div class="row"><span class="muted small">' + e(q.categories ? q.categories.name : "") + " · " + dt(q.created_at) + "</span>" + pill(STATUS, q.status) + "</div>" +
+    var html = "<h1>" + e(q.title) + '</h1><div class="row"><span class="muted small">' + e(q.categories ? q.categories.name : "") + " · " + dt(q.created_at) + "</span>" + pill(STATUS, q.status) + "</div>" +
       '<div class="card"><p style="white-space:pre-wrap;margin:0">' + e(q.description) + "</p>" +
       (q.desired_date || q.desired_slot ? '<p class="muted small" style="margin:10px 0 0">Preferência: ' + (q.desired_date ? new Date(q.desired_date + "T12:00:00").toLocaleDateString("pt-BR") + " · " : "") + e(SLOT[q.desired_slot] || "") + "</p>" : "") + "</div>";
+    html += stepsBlock(q.status);
     if (q.status === "awaiting_payment") html += '<div class="banner">Você escolheu uma proposta. O pagamento seguro dentro do app ainda está sendo liberado: a equipe do Resolvo Já vai falar com você no WhatsApp para combinar os próximos passos.</div>';
     if (q.status === "open" || q.status === "awaiting_payment" || q.status === "hired" || q.status === "completed") {
       html += "<h2>Propostas" + (props.length ? " (" + props.length + ")" : "") + "</h2>";
-      html += props.length ? props.map(function (p) {
+      html += props.length ? props.map(function (p, i) {
         var n = names[p.pro_id] || {};
-        return '<div class="card"><div class="row"><b>' + e(n.name || "Profissional") + '</b><span class="price">' + brl(p.amount_cents) + "</span></div>" +
-          '<div class="muted small">' + (n.rating_count ? "★ " + Number(n.rating_avg).toFixed(1) + " (" + n.rating_count + ") · " : "Novo no Resolvo Já · ") + (n.years_exp != null ? n.years_exp + " anos de experiência · " : "") + pill(PSTATUS, p.status) + "</div>" +
+        return '<div class="card prop"><div class="who">' + avatar(n.name || "P", i) + '<div class="t"><b>' + e(n.name || "Profissional") + '</b><span class="muted small">' + (n.rating_count ? '<span class="star">' + icon("star", 14) + "</span> " + Number(n.rating_avg).toFixed(1) + " (" + n.rating_count + ") · " : "Novo no Resolvo Já · ") + (n.years_exp != null ? n.years_exp + " anos de experiência" : "") + '</span></div><span class="price">' + brl(p.amount_cents) + "</span></div>" +
+          '<p style="margin:10px 0 0">' + pill(PSTATUS, p.status) + "</p>" +
           (p.eta_text ? '<p style="margin:8px 0 0"><b>Prazo:</b> ' + e(p.eta_text) + "</p>" : "") + (p.message ? '<p style="margin:6px 0 0;white-space:pre-wrap">' + e(p.message) + "</p>" : "") +
           (n.bio ? '<p class="muted small" style="margin:6px 0 0">' + e(n.bio) + "</p>" : "") +
           (q.status === "open" && p.status === "sent" ? '<button class="full" data-acc="' + p.id + '" type="button">Aceitar esta proposta</button>' : "") + "</div>";
@@ -392,7 +492,7 @@
     }
     if ((q.status === "open" && props.length) || q.status === "awaiting_payment" || q.status === "hired") html += chatBlock(id);
     if (q.status === "open" || q.status === "awaiting_payment") html += '<button class="danger full" id="can" type="button">Cancelar pedido</button>';
-    shell(html, "home");
+    shell(html, "pedidos", topbar("Pedido", "#/pedidos"));
     Array.prototype.forEach.call(document.querySelectorAll("[data-acc]"), function (b) {
       b.onclick = async function () {
         if (!confirm("Aceitar esta proposta? As outras serão recusadas.")) return;
@@ -410,11 +510,14 @@
   }
 
   // ---------- profissional ----------
+  function proHead(title, sub) {
+    return '<div class="hero"><div class="hrow"><div><small>Olá, ' + e(profile.name.split(" ")[0]) + '</small><span class="loc">' + icon("pin", 18) + "Sua região</span></div></div><h1>" + e(title) + "</h1>" + (sub ? '<p class="sub">' + e(sub) + "</p>" : "") + "</div>";
+  }
   async function proHome() {
     var banner = "";
     if (pro.status === "pending" && !pro.document_path) {
-      return shell('<h1>Início</h1><div class="banner">Falta um passo: envie a foto do seu RG ou CNH para a equipe conferir. Sem o documento, seu cadastro não pode ser aprovado.</div>' +
-        '<form class="card" id="df"><label for="doc">Documento com foto (RG ou CNH)</label><input id="doc" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"><p class="muted small">Foto nítida ou PDF, até 5 MB. Só a equipe vê este arquivo.</p><div id="derr"></div><button class="full" id="dgo" type="submit">Enviar documento</button></form>', "home"),
+      return shell('<div class="banner">Falta um passo: envie a foto do seu RG ou CNH para a equipe conferir. Sem o documento, seu cadastro não pode ser aprovado.</div>' +
+        '<form class="card" id="df"><label for="doc" style="margin-top:0">Documento com foto (RG ou CNH)</label><input id="doc" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"><p class="muted small">Foto nítida ou PDF, até 5 MB. Só a equipe vê este arquivo.</p><div id="derr"></div><button class="full" id="dgo" type="submit">Enviar documento</button></form>', "home", proHead("Início")),
         ($("df").onsubmit = async function (ev) {
           ev.preventDefault();
           var f = $("doc").files[0], m = !f ? "Escolha o arquivo do documento." : docCheck(f);
@@ -430,37 +533,36 @@
     }
     if (pro.status === "pending") banner = '<div class="banner">Seu cadastro está em análise pela equipe. Assim que for aprovado, os pedidos da sua região aparecem aqui.</div>';
     if (pro.status === "suspended") banner = '<div class="banner err">Seu cadastro está suspenso. Fale com o suporte do Resolvo Já.</div>';
-    if (pro.status !== "approved") return shell("<h1>Início</h1>" + banner, "home");
+    if (pro.status !== "approved") return shell(banner, "home", proHead("Início"));
+    var mine = await sb.from("proposals").select("request_id").eq("pro_id", user.id);
+    var proposed = {};
+    (mine.data || []).forEach(function (p) { proposed[p.request_id] = true; });
+    var r = await sb.from("service_requests").select("id,title,description,desired_date,desired_slot,created_at,categories(name)").eq("status", "open").order("created_at", { ascending: false });
+    if (r.error) throw r.error;
+    var list = (r.data || []).filter(function (x) { return !proposed[x.id]; });
+    var body = list.length ? list.map(function (x) {
+      return '<a class="card reqcard" href="#/pedido/' + x.id + '"><span class="ico">' + icon(catIcon(x.categories ? x.categories.name : ""), 22) + '</span><div class="t"><b>' + e(x.title) + '</b><span class="muted small">' + e(x.categories ? x.categories.name : "") + (x.desired_date ? " · para " + new Date(x.desired_date + "T12:00:00").toLocaleDateString("pt-BR") : "") + " · " + dt(x.created_at) + '</span><span class="small" style="display:block;white-space:normal;margin-top:4px">' + e(x.description.slice(0, 100)) + (x.description.length > 100 ? "…" : "") + "</span></div></a>";
+    }).join("") : '<div class="empty">Nenhum pedido novo na sua região agora. Volte daqui a pouco.</div>';
+    shell(body, "home", proHead("Pedidos abertos", "Envie sua proposta e conquiste o cliente."));
+  }
+
+  async function proProposals() {
     var mine = await sb.from("proposals").select("*,service_requests(id,title,status,categories(name))").eq("pro_id", user.id).order("created_at", { ascending: false });
-    var myList = mine.data || [], proposed = {};
-    myList.forEach(function (p) { proposed[p.request_id] = true; });
-    var body = "";
-    if (proTab === "abertos") {
-      var r = await sb.from("service_requests").select("id,title,description,desired_date,desired_slot,created_at,categories(name)").eq("status", "open").order("created_at", { ascending: false });
-      if (r.error) throw r.error;
-      var list = (r.data || []).filter(function (x) { return !proposed[x.id]; });
-      body = list.length ? list.map(function (x) {
-        return '<a class="card" href="#/pedido/' + x.id + '"><div class="row"><b>' + e(x.title) + '</b><span class="muted small">' + dt(x.created_at) + '</span></div><div class="muted small">' + e(x.categories ? x.categories.name : "") + (x.desired_date ? " · para " + new Date(x.desired_date + "T12:00:00").toLocaleDateString("pt-BR") : "") + '</div><p class="small" style="margin:6px 0 0">' + e(x.description.slice(0, 120)) + (x.description.length > 120 ? "…" : "") + "</p></a>";
-      }).join("") : '<div class="empty">Nenhum pedido novo na sua região agora. Volte daqui a pouco.</div>';
-    } else {
-      body = myList.length ? myList.map(function (p) {
-        var s = p.service_requests || {};
-        return '<a class="card" href="#/pedido/' + p.request_id + '"><div class="row"><b>' + e(s.title || "Pedido") + "</b>" + pill(PSTATUS, p.status) + '</div><div class="muted small">' + brl(p.amount_cents) + " · " + e(s.categories ? s.categories.name : "") + " · " + dt(p.created_at) + "</div></a>";
-      }).join("") : '<div class="empty">Você ainda não enviou propostas.</div>';
-    }
-    shell("<h1>Início</h1>" + '<div class="tabs"><button type="button" id="ta" class="' + (proTab === "abertos" ? "on" : "") + '">Pedidos abertos</button><button type="button" id="tb" class="' + (proTab === "minhas" ? "on" : "") + '">Minhas propostas</button></div>' + body, "home");
-    $("ta").onclick = function () { proTab = "abertos"; route(); };
-    $("tb").onclick = function () { proTab = "minhas"; route(); };
+    var myList = mine.data || [];
+    shell(myList.length ? myList.map(function (p) {
+      var s = p.service_requests || {};
+      return '<a class="card reqcard" href="#/pedido/' + p.request_id + '"><span class="ico">' + icon(catIcon(s.categories ? s.categories.name : ""), 22) + '</span><div class="t"><b>' + e(s.title || "Pedido") + '</b><span class="muted small">' + brl(p.amount_cents) + " · " + e(s.categories ? s.categories.name : "") + " · " + dt(p.created_at) + "</span><span style=\"display:block;margin-top:6px\">" + pill(PSTATUS, p.status) + "</span></div></a>";
+    }).join("") : '<div class="empty">Você ainda não enviou propostas.</div>', "propostas", topbar("Minhas propostas"));
   }
 
   async function proRequest(id) {
     var r = await sb.from("service_requests").select("*,categories(name)").eq("id", id).maybeSingle();
     if (r.error) throw r.error;
-    if (!r.data) return shell('<div class="empty">Pedido não encontrado ou já não está disponível.</div><a class="btn full" href="#/">Voltar</a>', "home");
+    if (!r.data) return shell('<div class="empty">Pedido não encontrado ou já não está disponível.</div><a class="btn full" href="#/">Voltar</a>', "home", topbar("Pedido", "#/"));
     var q = r.data;
     var m = await sb.from("proposals").select("*").eq("request_id", id).eq("pro_id", user.id).maybeSingle();
     var mine = m.data || null;
-    var html = '<p><a href="#/">← Início</a></p><h1>' + e(q.title) + '</h1><div class="row"><span class="muted small">' + e(q.categories ? q.categories.name : "") + " · " + dt(q.created_at) + "</span>" + pill(STATUS, q.status) + "</div>" +
+    var html = "<h1>" + e(q.title) + '</h1><div class="row"><span class="muted small">' + e(q.categories ? q.categories.name : "") + " · " + dt(q.created_at) + "</span>" + pill(STATUS, q.status) + "</div>" +
       '<div class="card"><p style="white-space:pre-wrap;margin:0">' + e(q.description) + "</p>" +
       (q.desired_date || q.desired_slot ? '<p class="muted small" style="margin:10px 0 0">Preferência: ' + (q.desired_date ? new Date(q.desired_date + "T12:00:00").toLocaleDateString("pt-BR") + " · " : "") + e(SLOT[q.desired_slot] || "") + "</p>" : "") +
       '<p class="muted small" style="margin:8px 0 0">O endereço completo e o contato do cliente são liberados depois da contratação e do pagamento.</p></div>';
@@ -473,13 +575,13 @@
       if (mine.status !== "rejected" && mine.status !== "withdrawn" && (q.status === "open" || q.status === "awaiting_payment" || q.status === "hired")) html += chatBlock(id);
     } else if (q.status === "open") {
       html += '<h2>Enviar proposta</h2><form class="card" id="f" novalidate>' +
-        '<label for="val">Valor do serviço (R$)</label><input id="val" inputmode="decimal" placeholder="Ex.: 150,00">' +
+        '<label for="val" style="margin-top:0">Valor do serviço (R$)</label><input id="val" inputmode="decimal" placeholder="Ex.: 150,00">' +
         '<p class="muted small" id="liq" style="margin:6px 0 0"></p>' +
         '<label for="eta">Quando você pode fazer?</label><input id="eta" maxlength="80" placeholder="Ex.: Amanhã à tarde">' +
         '<label for="msg">Mensagem (opcional)</label><textarea id="msg" maxlength="500" placeholder="Explique o que está incluso no valor."></textarea>' +
         '<div id="err"></div><button class="full" id="go" type="submit">Enviar proposta</button></form>';
     } else html += '<div class="empty">Este pedido não está mais aberto.</div>';
-    shell(html, "home");
+    shell(html, mine ? "propostas" : "home", topbar("Pedido", mine ? "#/propostas" : "#/"));
     if ($("val")) $("val").oninput = function () { var c = parseBrl($("val").value); $("liq").textContent = isNaN(c) ? "" : "Você recebe " + brl(Math.round(c * 0.9)) + " (valor menos a comissão de 10%)."; };
     if ($("f")) $("f").onsubmit = async function (ev) {
       ev.preventDefault();

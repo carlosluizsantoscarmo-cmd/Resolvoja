@@ -352,14 +352,15 @@
   async function signOut() { await sb.auth.signOut(); profile = null; pro = null; user = null; location.hash = ""; route(); }
 
   // ---------- perfil ----------
-  function screenPerfil() {
+  async function screenPerfil() {
     var isPro = profile.role === "pro";
+    var mpHtml = isPro && pro && pro.status === "approved" ? await mpConnectHtml() : "";
     shell('<div class="card"><div class="row" style="justify-content:flex-start;gap:14px">' + avatar(profile.name, 0) + '<div><b>' + e(profile.name) + '</b><br><span class="muted small">' + e(user.email || "") + "<br>" + e(profile.phone || "") + "</span></div></div>" +
       '<p style="margin:12px 0 0">' + (isPro ? "Profissional " + (pro && pro.status === "approved" ? '<span class="pill ok">aprovado</span>' : pro && pro.status === "suspended" ? '<span class="pill err">suspenso</span>' : '<span class="pill warn">em análise</span>') : "Cliente") + "</p></div>" +
-      installBlock() +
+      mpHtml + installBlock() +
       '<p class="small center muted" style="margin-top:18px"><a href="/termos.html" target="_blank" rel="noopener">Termos</a> · <a href="/privacidade.html" target="_blank" rel="noopener">Privacidade</a></p>' +
       '<button class="danger full" id="out" type="button">Sair da conta</button>', "perfil", topbar("Perfil"));
-    $("out").onclick = signOut; bindInstall();
+    $("out").onclick = signOut; bindInstall(); mpConnectBind();
   }
 
   // ---------- chat ----------
@@ -522,7 +523,16 @@
       '<div class="card"><p style="white-space:pre-wrap;margin:0">' + e(q.description) + "</p>" +
       (q.desired_date || q.desired_slot ? '<p class="muted small" style="margin:10px 0 0">Preferência: ' + (q.desired_date ? new Date(q.desired_date + "T12:00:00").toLocaleDateString("pt-BR") + " · " : "") + e(SLOT[q.desired_slot] || "") + "</p>" : "") + "</div>";
     html += stepsBlock(q.status);
-    if (q.status === "awaiting_payment") html += '<div class="banner">Você escolheu uma proposta. O pagamento seguro dentro do app ainda está sendo liberado: a equipe do Resolvo Já vai falar com você no WhatsApp para combinar os próximos passos.</div>';
+    var accepted = props.filter(function (x) { return x.status === "accepted"; })[0], payMode = "";
+    if (q.status === "awaiting_payment" && accepted) {
+      var cn = await sb.rpc("request_pro_connected", { p_request: id });
+      if (cn.data === true) { html += payHtml(accepted.amount_cents); payMode = "pay"; }
+    }
+    if (q.status === "awaiting_payment" && !payMode) html += '<div class="banner">Você escolheu uma proposta. O pagamento seguro dentro do app ainda está sendo liberado: a equipe do Resolvo Já vai falar com você no WhatsApp para combinar os próximos passos.</div>';
+    if (q.status === "hired") {
+      var hp0 = await sb.from("payments").select("provider,method,status").eq("request_id", id).maybeSingle();
+      if (hp0.data && hp0.data.provider === "mercadopago") { html += doneHtml(hp0.data); payMode = "done"; }
+    }
     if (q.status === "open" || q.status === "awaiting_payment" || q.status === "hired" || q.status === "completed") {
       html += "<h2>Propostas" + (props.length ? " (" + props.length + ")" : "") + "</h2>";
       html += props.length ? props.map(function (p, i) {
@@ -550,7 +560,136 @@
       var x = await sb.from("service_requests").update({ status: "cancelled" }).eq("id", id);
       if (x.error) toast(friendly(x.error)); else { toast("Pedido cancelado."); route(); }
     };
+    if (payMode === "pay") payBind(id, accepted.amount_cents);
+    if (payMode === "done") doneBind(id);
     if ($("chat")) chatBind(id);
+    if (q.status === "awaiting_payment" || q.status === "hired") {
+      var t0 = timer; if (t0) clearInterval(t0);
+      timer = setInterval(async function () {
+        if ($("chat")) chatLoad(id);
+        var st = await sb.from("service_requests").select("status").eq("id", id).maybeSingle();
+        if (st.data && st.data.status !== q.status) route();
+      }, 6000);
+    }
+  }
+
+  // ---------- pagamento (Mercado Pago) ----------
+  async function api(path, body) {
+    var ses = await sb.auth.getSession();
+    var tk = ses.data && ses.data.session ? ses.data.session.access_token : "";
+    var res, data = {};
+    try {
+      res = await fetch(path, { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + tk }, body: JSON.stringify(body || {}) });
+      data = await res.json().catch(function () { return {}; });
+    } catch (x) { return { ok: false, error: "Sem conexão. Confira a internet e tente de novo." }; }
+    if (!res.ok && !data.error) data.error = "Não foi possível concluir agora. Tente de novo.";
+    if (!res.ok) data.ok = false;
+    return data;
+  }
+  var mpSdk = null;
+  function loadMpSdk() {
+    if (window.MercadoPago) return Promise.resolve();
+    if (mpSdk) return mpSdk;
+    mpSdk = new Promise(function (ok, bad) {
+      var s = document.createElement("script"); s.src = "https://sdk.mercadopago.com/js/v2"; s.onload = ok;
+      s.onerror = function () { mpSdk = null; bad(new Error("Não foi possível carregar o pagamento. Confira a internet.")); };
+      document.head.appendChild(s);
+    });
+    return mpSdk;
+  }
+  function payBox(msg, cls) { var b = $("payerr"); if (b) b.innerHTML = msg ? '<div class="banner ' + (cls || "err") + '" role="alert">' + e(msg) + "</div>" : ""; }
+
+  // Tela de pagamento do cliente (pedido em "awaiting_payment" com o profissional já conectado).
+  function payHtml(amount) {
+    return '<h2>Pagamento</h2><div class="card" id="paycard"><div class="row"><span>Valor do serviço</span><span class="price">' + brl(amount) + '</span></div>' +
+      '<p class="muted small" style="margin:8px 0 12px">Pagamento seguro pelo Mercado Pago. O valor só é repassado ao profissional depois que você confirmar o serviço.</p>' +
+      '<div id="payerr"></div><div class="chips" id="pm"><button type="button" class="full" id="pix">Pagar com Pix</button><button type="button" class="ghost full" id="crd">Pagar com cartão</button></div><div id="paybody"></div></div>';
+  }
+  function pixView(pix) {
+    var img = pix.qr_base64 ? '<img alt="QR Code Pix" style="width:200px;height:200px;display:block;margin:12px auto" src="data:image/png;base64,' + e(pix.qr_base64) + '">' : "";
+    $("paybody").innerHTML = img + '<p class="small center muted" style="margin:0 0 8px">Abra o app do seu banco, escolha Pix e leia o QR Code, ou use o código abaixo.</p>' +
+      '<input id="pixcode" readonly value="' + e(pix.code || "") + '" aria-label="Código Pix copia e cola"><button type="button" class="full" id="cp">Copiar código Pix</button>' +
+      '<p class="small center muted" style="margin:10px 0 0">Esta tela atualiza sozinha assim que o pagamento for confirmado.' + (pix.expires_at ? " O código vale até " + hm(pix.expires_at) + "." : "") + "</p>";
+    $("cp").onclick = function () {
+      var v = $("pixcode").value;
+      (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(v) : Promise.reject()).then(function () { toast("Código copiado!"); }, function () { $("pixcode").select(); toast("Selecione e copie o código."); });
+    };
+  }
+  async function startPix(id) {
+    payBox(""); $("pix").disabled = true; $("paybody").innerHTML = '<p class="muted small center">Gerando o Pix…</p>';
+    var r = await api("/api/mp/pay", { request_id: id, method: "pix" });
+    $("pix").disabled = false;
+    if (!r.ok || !r.pix || !r.pix.code) { $("paybody").innerHTML = ""; return payBox(r.error || "Não foi possível gerar o Pix agora."); }
+    pixView(r.pix);
+  }
+  async function startCard(id, amount) {
+    payBox(""); $("paybody").innerHTML = '<p class="muted small center">Carregando o formulário do cartão…</p>';
+    try {
+      var cfg = await fetch("/api/mp/config").then(function (x) { return x.json(); });
+      if (!cfg.public_key) throw new Error("Pagamento por cartão ainda não está disponível.");
+      await loadMpSdk();
+      var mp = new window.MercadoPago(cfg.public_key, { locale: "pt-BR" });
+      $("paybody").innerHTML = '<div id="cardbrick"></div>';
+      await mp.bricks().create("cardPayment", "cardbrick", {
+        initialization: { amount: amount / 100, payer: { email: user.email || "" } },
+        customization: { visual: { hidePaymentButton: false }, paymentMethods: { maxInstallments: 1 } },
+        callbacks: {
+          onReady: function () {},
+          onError: function () { payBox("Confira os dados do cartão e tente de novo."); },
+          onSubmit: function (d) {
+            payBox("");
+            return api("/api/mp/pay", { request_id: id, method: "card", token: d.token, installments: d.installments, payment_method_id: d.payment_method_id, issuer_id: d.issuer_id, identification: d.payer && d.payer.identification }).then(function (r) {
+              if (!r.ok) { payBox(r.error || "Pagamento não aprovado."); throw new Error("recusado"); }
+              toast("Pagamento reservado no cartão!"); route();
+            });
+          }
+        }
+      });
+    } catch (x) { $("paybody").innerHTML = ""; payBox(friendly(x)); }
+  }
+  async function payBind(id, amount) {
+    var pm = await sb.from("payments").select("status,method,pix_code,pix_qr,expires_at").eq("request_id", id).maybeSingle();
+    var p = pm.data;
+    if (p && p.status === "pending" && p.method === "pix" && p.pix_code && (!p.expires_at || Date.parse(p.expires_at) > Date.now())) pixView({ code: p.pix_code, qr_base64: p.pix_qr, expires_at: p.expires_at });
+    $("pix").onclick = function () { startPix(id); };
+    $("crd").onclick = function () { startCard(id, amount); };
+  }
+  function doneHtml(pay) {
+    var how = pay && pay.method === "card" ? "O valor está reservado no seu cartão e só será cobrado quando você confirmar o serviço (ou automaticamente em até 4 dias)." : "Pagamento por Pix confirmado.";
+    return '<h2>Pagamento</h2><div class="card"><p style="margin:0">' + e(how) + '</p><p class="muted small" style="margin:8px 0 0">Quando o serviço terminar, confirme abaixo. Se algo deu errado, abra um problema antes de confirmar.</p>' +
+      '<div id="payerr"></div><button class="full" id="conf" type="button">Confirmar serviço concluído</button><button class="ghost full" id="prob" type="button">Tive um problema</button></div>';
+  }
+  function doneBind(id) {
+    $("conf").onclick = async function () {
+      if (!confirm("Confirmar que o serviço foi concluído? O pagamento será liberado ao profissional.")) return;
+      $("conf").disabled = true;
+      var r = await api("/api/mp/confirm", { request_id: id });
+      if (!r.ok) { $("conf").disabled = false; return payBox(r.error || "Não foi possível confirmar agora."); }
+      toast("Serviço confirmado. Obrigado!"); route();
+    };
+    $("prob").onclick = async function () {
+      var why = prompt("Conte o que aconteceu (a equipe do Resolvo Já vai analisar):");
+      if (!why || why.trim().length < 10) { if (why !== null) toast("Descreva melhor o problema (mínimo de 10 letras)."); return; }
+      var x = await sb.from("disputes").insert({ request_id: id, opened_by: user.id, reason: why.trim().slice(0, 1000) });
+      if (x.error) toast(friendly(x.error)); else { toast("Problema enviado. A equipe vai entrar em contato."); route(); }
+    };
+  }
+
+  // Cartão "Conectar Mercado Pago" do profissional.
+  async function mpConnectHtml() {
+    var c = await sb.rpc("my_mp_connected");
+    if (c.error) return "";
+    if (c.data) return '<div class="banner ok">Mercado Pago conectado. Você recebe os pagamentos direto na sua conta.</div>';
+    return '<div class="card"><b>Conecte sua conta do Mercado Pago</b><p class="muted small" style="margin:6px 0 10px">É por ela que você recebe: o cliente paga pelo app e o valor (menos 10% de comissão) cai na sua conta. Sem a conexão, os clientes não conseguem pagar pelo app.</p><div id="mperr"></div><button class="full" id="mpc" type="button">Conectar Mercado Pago</button></div>';
+  }
+  function mpConnectBind() {
+    if (!$("mpc")) return;
+    $("mpc").onclick = async function () {
+      $("mpc").disabled = true;
+      var r = await api("/api/mp/connect", {});
+      if (!r.url) { $("mpc").disabled = false; $("mperr").innerHTML = '<div class="banner err" role="alert">' + e(r.error || "Não foi possível conectar agora.") + "</div>"; return; }
+      location.href = r.url;
+    };
   }
 
   // ---------- profissional ----------
@@ -578,6 +717,7 @@
     if (pro.status === "pending") banner = '<div class="banner">Seu cadastro está em análise pela equipe. Assim que for aprovado, os pedidos da sua região aparecem aqui.</div>';
     if (pro.status === "suspended") banner = '<div class="banner err">Seu cadastro está suspenso. Fale com o suporte do Resolvo Já.</div>';
     if (pro.status !== "approved") return shell(banner, "home", proHead("Início"));
+    var mpHtml = await mpConnectHtml();
     var mine = await sb.from("proposals").select("request_id").eq("pro_id", user.id);
     var proposed = {};
     (mine.data || []).forEach(function (p) { proposed[p.request_id] = true; });
@@ -587,7 +727,8 @@
     var body = list.length ? list.map(function (x) {
       return '<a class="card reqcard" href="#/pedido/' + x.id + '"><span class="ico">' + icon(catIcon(x.categories ? x.categories.name : ""), 22) + '</span><div class="t"><b>' + e(x.title) + '</b><span class="muted small">' + e(x.categories ? x.categories.name : "") + (x.desired_date ? " · para " + new Date(x.desired_date + "T12:00:00").toLocaleDateString("pt-BR") : "") + " · " + dt(x.created_at) + '</span><span class="small" style="display:block;white-space:normal;margin-top:4px">' + e(x.description.slice(0, 100)) + (x.description.length > 100 ? "…" : "") + "</span></div></a>";
     }).join("") : '<div class="empty">Nenhum pedido novo na sua região agora. Volte daqui a pouco.</div>';
-    shell(body, "home", proHead("Pedidos abertos", "Envie sua proposta e conquiste o cliente."));
+    shell(mpHtml + body, "home", proHead("Pedidos abertos", "Envie sua proposta e conquiste o cliente."));
+    mpConnectBind();
   }
 
   async function proProposals() {
@@ -615,7 +756,7 @@
         (mine.eta_text ? "<p style=\"margin:8px 0 0\"><b>Prazo:</b> " + e(mine.eta_text) + "</p>" : "") + (mine.message ? '<p style="margin:6px 0 0;white-space:pre-wrap">' + e(mine.message) + "</p>" : "") +
         '<p class="muted small" style="margin:8px 0 0">Você recebe ' + brl(Math.round(mine.amount_cents * 0.9)) + " (valor menos a comissão de 10%).</p>" +
         (mine.status === "sent" && q.status === "open" ? '<button class="danger full" id="wd" type="button">Retirar proposta</button>' : "") + "</div>";
-      if (mine.status === "accepted") html += '<div class="banner ok">Você foi escolhido! O pagamento do cliente está sendo liberado; a equipe do Resolvo Já entra em contato com você.</div>';
+      if (mine.status === "accepted") html += '<div class="banner ok">Você foi escolhido! Assim que o cliente pagar, você será avisado e o valor cai direto na sua conta do Mercado Pago (menos a comissão de 10%). Se ainda não conectou o Mercado Pago, faça isso na tela Início.</div>';
       if (mine.status !== "rejected" && mine.status !== "withdrawn" && (q.status === "open" || q.status === "awaiting_payment" || q.status === "hired")) html += chatBlock(id);
     } else if (q.status === "open") {
       html += '<h2>Enviar proposta</h2><form class="card" id="f" novalidate>' +
@@ -656,6 +797,8 @@
     var linkErr = /[#&]error_code=/.test(location.hash) ? (/otp_expired/.test(location.hash) ? "expired" : "other") : "";
     if (linkErr) { try { history.replaceState(null, "", location.pathname); } catch (x) {} }
     if (recovering) { setTimeout(function () { try { history.replaceState(null, "", location.pathname); } catch (x) {} }, 1500); }
+    var mpRes = new URLSearchParams(location.search).get("mp");
+    if (mpRes) { try { history.replaceState(null, "", location.pathname + location.hash); } catch (x) {} }
     if (!CFG.url || !CFG.anonKey || !window.supabase) { sb = null; return route(); }
     sb = window.supabase.createClient(CFG.url, CFG.anonKey, { auth: { persistSession: true, autoRefreshToken: true } });
     var started = false;
@@ -669,6 +812,7 @@
       var u = r.data && r.data.session ? r.data.session.user : null;
       user = u; started = true;
       if (recovering && u) screenNewPassword(); else { recovering = false; route(); }
+      if (mpRes) toast(mpRes === "ok" ? "Mercado Pago conectado com sucesso!" : "Não foi possível conectar o Mercado Pago. Tente de novo.");
       if (linkErr) toast(linkErr === "expired" ? "Esse link venceu ou já foi usado. Tente entrar com seu e-mail e senha." : "Não foi possível usar esse link. Tente entrar com seu e-mail e senha.");
     });
   }

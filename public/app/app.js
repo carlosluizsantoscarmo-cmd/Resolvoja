@@ -505,6 +505,9 @@
   if ("serviceWorker" in navigator) window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 
   function init() {
+    // Link do e-mail vencido ou já usado: avisa em português e limpa o endereço.
+    var linkErr = /[#&]error_code=/.test(location.hash) ? (/otp_expired/.test(location.hash) ? "expired" : "other") : "";
+    if (linkErr) { try { history.replaceState(null, "", location.pathname); } catch (x) {} }
     if (!CFG.url || !CFG.anonKey || !window.supabase) { sb = null; return route(); }
     sb = window.supabase.createClient(CFG.url, CFG.anonKey, { auth: { persistSession: true, autoRefreshToken: true } });
     var started = false;
@@ -517,6 +520,7 @@
       var u = r.data && r.data.session ? r.data.session.user : null;
       user = u; started = true;
       route();
+      if (linkErr) toast(linkErr === "expired" ? "Esse link venceu ou já foi usado. Tente entrar com seu e-mail e senha." : "Não foi possível usar esse link. Tente entrar com seu e-mail e senha.");
     });
   }
   init();

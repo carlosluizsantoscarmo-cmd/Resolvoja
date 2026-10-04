@@ -316,11 +316,15 @@ async function applyPayment(env, payment, ctx) {
     order.paidAt = order.paidAt || new Date().toISOString();
   } else if (order.status !== "paid") {
     order.status = String(payment.status || "pending"); // pending, rejected, cancelled, refunded...
+    if (order.status === "refunded" || order.status === "charged_back") order.refundedAt = order.refundedAt || new Date().toISOString();
   } else if (payment.status === "refunded" || payment.status === "charged_back") {
     order.status = payment.status;
+    order.refundedAt = order.refundedAt || new Date().toISOString();
   }
   order.paymentId = payment.id;
-  await env.LEADS.put(orderKey(order.id), JSON.stringify(order), { expirationTtl: ORDER_TTL });
+  // Registros financeiros (pagos, reembolsados, contestados) ficam guardados para relatórios e contabilidade; os demais expiram em 180 dias.
+  const guardar = ["paid", "refunded", "charged_back"].includes(order.status);
+  await env.LEADS.put(orderKey(order.id), JSON.stringify(order), guardar ? undefined : { expirationTtl: ORDER_TTL });
   if (primeiraVez) {
     const titulo = (CATALOGO[order.item] && CATALOGO[order.item].titulo) || order.item;
     notifyOwner(env, ctx, `Pagamento confirmado: ${brl(order.totalCents)} - ${order.nome}`,

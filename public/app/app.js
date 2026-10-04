@@ -94,7 +94,7 @@
         ? '<p class="muted small" style="margin:6px 0 0">Mínimo de 8 caracteres.</p>' +
           '<label>Como você vai usar o app?</label><div class="chips"><label><input type="radio" name="role" value="client" checked> Quero contratar</label><label><input type="radio" name="role" value="pro"> Sou profissional</label></div>' +
           '<p id="prohint" class="banner" hidden>Profissional: depois de criar a conta e entrar, você escolhe os <b>serviços</b>, os <b>bairros</b> e informa a <b>experiência</b> na próxima tela.</p>' +
-          '<label style="font-weight:500;display:flex;gap:8px;align-items:flex-start;margin-top:16px"><input id="ok" type="checkbox" style="width:auto;margin-top:4px"><span>Li e aceito os <a href="/termos.html" target="_blank" rel="noopener">Termos</a> e a <a href="/privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>.</span></label>'
+      '<label style="font-weight:500;display:flex;gap:8px;align-items:flex-start;margin-top:16px"><input id="ok" type="checkbox" style="width:auto;margin-top:4px"><span>Li e aceito os <a href="/termos.html" target="_blank" rel="noopener">Termos</a> e a <a href="/privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>.</span></label>'
         : "") +
       '<div id="err"></div><button class="full" id="go" type="submit">' + (signup ? "Criar conta" : "Entrar") + "</button></form>" + installBlock()
     );
@@ -168,6 +168,7 @@
       '<label>Onde você atende?</label><div class="chips">' + regions.map(function (x) { return '<label><input type="checkbox" name="reg" value="' + x.id + '"> ' + e(x.name) + " (" + e(x.city) + ")</label>"; }).join("") + "</div>" +
       '<label for="exp">Anos de experiência</label><input id="exp" type="number" inputmode="numeric" min="0" max="70">' +
       '<label for="bio">Fale um pouco sobre seu trabalho</label><textarea id="bio" maxlength="600" placeholder="Ex.: Eletricista há 8 anos. Instalação de chuveiro, tomadas, quadro de luz."></textarea>' +
+          '<label for="doc">Documento com foto (RG ou CNH)</label><input id="doc" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"><p class="muted small">Foto nítida ou PDF, até 5 MB. Só a equipe do Resolvo Já vê este arquivo, para confirmar quem você é. Ele não aparece para clientes.</p>' +
       '<label style="font-weight:500;display:flex;gap:8px;align-items:flex-start;margin-top:16px"><input id="ok" type="checkbox" style="width:auto;margin-top:4px"><span>Li e aceito os <a href="/termos.html" target="_blank" rel="noopener">Termos</a>, inclusive a taxa de verificação de R$ 29,90 e a comissão de 10% sobre os serviços feitos pelo app.</span></label>' +
       '<div id="err"></div><button class="full" id="go" type="submit">Enviar para análise</button></form>');
     $("f").onsubmit = async function (ev) {
@@ -179,12 +180,20 @@
       if (!cs.length) return bad("Escolha pelo menos um serviço.");
       if (!rs.length) return bad("Escolha pelo menos um bairro de atendimento.");
       if (exp !== null && (!(exp >= 0) || exp > 70)) return bad("Confira os anos de experiência.");
+      var df = $("doc").files[0], needDoc = !pro || !pro.document_path;
+      if (needDoc && !df) return bad("Envie a foto do seu RG ou CNH para a equipe conferir.");
+      var dErr = df ? docCheck(df) : "";
+      if (dErr) return bad(dErr);
       if (!$("ok").checked) return bad("Marque a aceitação dos Termos para continuar.");
       $("go").disabled = true;
       try {
+        var path = df ? await uploadDoc(df) : null;
         if (!pro) {
-          var a = await sb.from("pro_profiles").insert({ user_id: user.id, bio: bio || null, years_exp: exp, status: "pending" });
+          var a = await sb.from("pro_profiles").insert({ user_id: user.id, bio: bio || null, years_exp: exp, status: "pending", document_path: path });
           if (a.error) throw a.error;
+        } else if (path) {
+          var a2 = await sb.from("pro_profiles").update({ document_path: path }).eq("user_id", user.id);
+          if (a2.error) throw a2.error;
         }
         var b1 = await sb.from("pro_categories").upsert(cs.map(function (id) { return { user_id: user.id, category_id: id }; }));
         if (b1.error) throw b1.error;
@@ -198,6 +207,20 @@
         await loadMe(true); go("#/");
       } catch (x) { $("go").disabled = false; bad(friendly(x)); }
     };
+  }
+
+  // ---------- documento do profissional ----------
+  function docCheck(f) {
+    if (!/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(f.type)) return "Envie uma foto (JPG, PNG) ou um PDF.";
+    if (f.size > 5 * 1024 * 1024) return "O arquivo passa de 5 MB. Tire a foto de novo com menos qualidade ou envie um PDF menor.";
+    return "";
+  }
+  async function uploadDoc(f) {
+    var ext = f.type === "application/pdf" ? "pdf" : f.type === "image/png" ? "png" : f.type === "image/webp" ? "webp" : "jpg";
+    var path = user.id + "/documento-" + Date.now() + "." + ext;
+    var r = await sb.storage.from("documentos").upload(path, f, { contentType: f.type, upsert: false });
+    if (r.error) throw r.error;
+    return path;
   }
 
   // ---------- dados do usuário ----------
@@ -389,6 +412,22 @@
   // ---------- profissional ----------
   async function proHome() {
     var banner = "";
+    if (pro.status === "pending" && !pro.document_path) {
+      return shell('<h1>Início</h1><div class="banner">Falta um passo: envie a foto do seu RG ou CNH para a equipe conferir. Sem o documento, seu cadastro não pode ser aprovado.</div>' +
+        '<form class="card" id="df"><label for="doc">Documento com foto (RG ou CNH)</label><input id="doc" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"><p class="muted small">Foto nítida ou PDF, até 5 MB. Só a equipe vê este arquivo.</p><div id="derr"></div><button class="full" id="dgo" type="submit">Enviar documento</button></form>', "home"),
+        ($("df").onsubmit = async function (ev) {
+          ev.preventDefault();
+          var f = $("doc").files[0], m = !f ? "Escolha o arquivo do documento." : docCheck(f);
+          if (m) { $("derr").innerHTML = '<div class="banner err" role="alert">' + e(m) + "</div>"; return; }
+          $("dgo").disabled = true;
+          try {
+            var path = await uploadDoc(f);
+            var u = await sb.from("pro_profiles").update({ document_path: path }).eq("user_id", user.id);
+            if (u.error) throw u.error;
+            toast("Documento enviado. Obrigado!"); await loadMe(true); route();
+          } catch (x) { $("dgo").disabled = false; $("derr").innerHTML = '<div class="banner err" role="alert">' + e(friendly(x)) + "</div>"; }
+        });
+    }
     if (pro.status === "pending") banner = '<div class="banner">Seu cadastro está em análise pela equipe. Assim que for aprovado, os pedidos da sua região aparecem aqui.</div>';
     if (pro.status === "suspended") banner = '<div class="banner err">Seu cadastro está suspenso. Fale com o suporte do Resolvo Já.</div>';
     if (pro.status !== "approved") return shell("<h1>Início</h1>" + banner, "home");

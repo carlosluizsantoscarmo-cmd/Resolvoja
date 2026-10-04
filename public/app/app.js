@@ -234,7 +234,7 @@
     try {
       await loadMe();
       if (!profile) return screenBasicProfile();
-      if (profile.role === "admin") return shell('<div class="card"><h1>Conta da equipe</h1><p>Use o painel da equipe no computador: <a href="/admin.html">painel</a>.</p><button class="ghost full" id="out" type="button">Sair</button></div>', "perfil"), ($("out").onclick = signOut);
+      if (profile.role === "admin") return shell('<div class="card"><h1>Conta da equipe</h1><p>Use o painel da equipe: <a href="/equipe/">abrir painel</a>.</p><button class="ghost full" id="out" type="button">Sair</button></div>', "perfil"), ($("out").onclick = signOut);
       if (profile.role === "pro" && (!pro || pro._incomplete)) return screenProSetup();
       var h = location.hash || "#/", m;
       if (h === "#/perfil") return screenPerfil();

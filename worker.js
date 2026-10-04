@@ -465,6 +465,49 @@ async function negociacaoPost({ request, env, ctx }) {
   return json(200, { ok: true });
 }
 
+// ---- Avisos automáticos para clientes e profissionais (vêm do Supabase) ----
+// POST /api/aviso  cabeçalho x-rj-secret = NOTIFY_SECRET. Corpo: { type, to: [e-mails], data }. Um e-mail separado por destinatário.
+// Exige MAIL_FROM (remetente de domínio verificado no Resend).
+const APP_URL = "https://resolvoja.app.br/app/";
+function avisoTexto(type, d, t) {
+  const nome = (x) => (t(x, 60) || "").split(" ")[0] || "";
+  const titulo = t(d.title, 120);
+  const rodape = `\nAbrir o Resolvo Já: ${APP_URL}\n\nVocê recebe este e-mail porque tem cadastro no Resolvo Já (resolvoja.app.br).`;
+  if (type === "proposta_recebida") {
+    const cents = Number(d.amount_cents);
+    if (!Number.isInteger(cents) || cents <= 0) return null;
+    return { subject: `Nova proposta para "${titulo}"`, text: `Olá, ${nome(d.client_name)}!\n\n${t(d.pro_name, 60)} enviou uma proposta para o seu pedido "${titulo}".\nValor: ${brl(cents)}${d.eta ? "\nPrazo: " + t(d.eta, 80) : ""}\n\nEntre no app para ver os detalhes e escolher a melhor proposta.${rodape}` };
+  }
+  if (type === "pedido_novo") {
+    return { subject: `Novo pedido: ${titulo}`, text: `Olá!\n\nChegou um pedido novo na sua área:\n\nServiço: ${titulo} (${t(d.category, 40)})\nLocal: ${t(d.bairro, 60)}, ${t(d.city, 60)}\n\nQuem responde primeiro costuma ter mais chance. Entre no app e envie sua proposta.${rodape}` };
+  }
+  if (type === "proposta_aceita") {
+    const cents = Number(d.amount_cents);
+    if (!Number.isInteger(cents) || cents <= 0) return null;
+    return { subject: `Sua proposta foi aceita: ${titulo}`, text: `Olá, ${nome(d.pro_name)}!\n\nO cliente aceitou sua proposta para "${titulo}" (${brl(cents)}).\n\nNossa equipe vai entrar em contato para combinar o pagamento e liberar o início do serviço. Fique de olho no WhatsApp e no app.${rodape}` };
+  }
+  if (type === "pro_aprovado") {
+    return { subject: "Seu cadastro foi aprovado no Resolvo Já", text: `Olá, ${nome(d.pro_name)}!\n\nSeu cadastro foi aprovado. Você já pode ver os pedidos da sua área e enviar propostas.\n\nDica: responda rápido e descreva bem o que está incluso no valor.${rodape}` };
+  }
+  return null;
+}
+async function avisoPost({ request, env, ctx }) {
+  if (!env.NOTIFY_SECRET || env.NOTIFY_SECRET.length < 16) return json(503, { error: "Aviso não configurado." });
+  if (!sameSecret(request.headers.get("x-rj-secret"), env.NOTIFY_SECRET)) return json(401, { error: "Não autorizado." });
+  if (!env.MAIL_FROM) return json(503, { error: "Remetente não configurado." });
+  let b;
+  try { const raw = await request.text(); if (raw.length > 8000) return json(413, { error: "Grande demais." }); b = JSON.parse(raw); }
+  catch { return json(400, { error: "Pedido inválido." }); }
+  const t = (x, n) => String(x == null ? "" : x).replace(/[\r\n]+/g, " ").slice(0, n);
+  const msg = avisoTexto(String(b.type || ""), b.data && typeof b.data === "object" ? b.data : {}, t);
+  if (!msg) return json(400, { error: "Tipo ou dados inválidos." });
+  const emails = (Array.isArray(b.to) ? b.to : []).map((e) => t(e, 120).trim()).filter((e) => /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/.test(e)).slice(0, 30);
+  if (!emails.length) return json(400, { error: "Sem destinatários." });
+  const p = Promise.all(emails.map((to) => sendMail(env, { to, subject: msg.subject, text: msg.text })));
+  if (ctx && ctx.waitUntil) ctx.waitUntil(p);
+  return json(200, { ok: true, enviados: emails.length });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const { pathname } = new URL(request.url);
@@ -477,6 +520,7 @@ export default {
       return leadsOther({ request, env });
     }
     if (pathname === "/api/negociacao") return request.method === "POST" ? negociacaoPost({ request, env, ctx }) : json(405, { error: "Método não permitido." }, { Allow: "POST" });
+    if (pathname === "/api/aviso") return request.method === "POST" ? avisoPost({ request, env, ctx }) : json(405, { error: "Método não permitido." }, { Allow: "POST" });
     if (pathname === "/api/checkout") return request.method === "POST" ? checkoutPost({ request, env }) : json(405, { error: "Método não permitido." }, { Allow: "POST" });
     if (pathname === "/api/mp-webhook") return request.method === "POST" ? mpWebhook({ request, env, ctx }) : json(405, { error: "Método não permitido." }, { Allow: "POST" });
     if (pathname === "/api/pedido") return request.method === "GET" ? pedidoGet({ request, env, ctx }) : json(405, { error: "Método não permitido." }, { Allow: "GET" });

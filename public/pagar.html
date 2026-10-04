@@ -35,6 +35,7 @@ button[disabled]{opacity:.6;cursor:wait}
   <label for="email">E-mail</label>
   <input id="email" type="email" autocomplete="email" maxlength="120" required>
   <div class="hp" aria-hidden="true"><label for="website">Não preencha</label><input id="website" type="text" tabindex="-1" autocomplete="off"></div>
+  <div id="cf-turnstile" style="margin-top:14px"></div>
   <div class="err" id="err" role="alert"></div>
   <button id="go" type="submit">Pagar com Mercado Pago</button>
   <p class="muted">Você será levado ao Mercado Pago para concluir o pagamento com Pix, cartão ou saldo. Não guardamos dados do seu cartão. Você tem 7 dias para desistir e receber o reembolso. Veja os <a href="/termos.html">Termos e reembolso</a> e a <a href="/privacidade.html">Política de Privacidade</a>.</p>
@@ -50,16 +51,19 @@ button[disabled]{opacity:.6;cursor:wait}
     var nome=$('nome').value.trim(),email=$('email').value.trim();
     if(!nome){err.textContent='Informe seu nome.';err.style.display='block';$('nome').focus();return}
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)){err.textContent='Confira o e-mail.';err.style.display='block';$('email').focus();return}
+    if(window.RJ&&RJ.enabled()&&!RJ.token()){err.textContent='Aguarde a verificação anti-robô terminar e tente de novo.';err.style.display='block';return}
     go.disabled=true;go.textContent='Abrindo o Mercado Pago…';
-    fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item:ITEM,nome:nome,email:email,website:$('website').value})})
+    fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item:ITEM,nome:nome,email:email,website:$('website').value,turnstile:(window.RJ&&RJ.token())||''})})
       .then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d}})})
       .then(function(x){
         if(x.ok&&x.d.url){location.href=x.d.url;return}
         throw new Error(x.d.error||'Não foi possível iniciar o pagamento.');
       })
-      .catch(function(ex){err.textContent=ex.message||'Erro de conexão. Tente de novo.';err.style.display='block';go.disabled=false;go.textContent='Pagar com Mercado Pago'});
+      .catch(function(ex){err.textContent=ex.message||'Erro de conexão. Tente de novo.';err.style.display='block';go.disabled=false;go.textContent='Pagar com Mercado Pago';if(window.RJ)RJ.reset()});
   });
 })();
 </script>
+<script src="/config.js"></script>
+<script src="/site.js"></script>
 </body>
 </html>

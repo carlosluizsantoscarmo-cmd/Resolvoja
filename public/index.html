@@ -296,6 +296,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
      <div class="full"><label class="chk" for="lgpd"><input id="lgpd" type="checkbox"><span>Autorizo o Resolvo Já a usar meus dados só para me avisar sobre o piloto, conforme a LGPD. Leia a <a href="/privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>. Posso pedir a exclusão a qualquer momento.</span></label></div>
     </div>
     <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true"><label>Não preencha este campo<input type="text" id="website" tabindex="-1" autocomplete="off"></label></div>
+    <div id="cf-turnstile" style="margin-top:18px"></div>
     <div style="margin-top:22px"><button class="btn" type="submit" id="send" style="width:100%">Entrar na lista</button></div>
     <div id="out" role="status" aria-live="polite"></div>
    </form>
@@ -354,12 +355,13 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
     var cats=Array.prototype.map.call(document.querySelectorAll('input[name="cat-'+(kind==='pro'?'pro':'cli')+'"]:checked'),function(i){return i.value});
     if(kind==='pro'&&!cats.length){show('err','Escolha pelo menos uma categoria em que você trabalha.');return}
     var rec={tipo:kind,nome:nome,whatsapp:zap,bairro:bairro,cidade:$('cidade').value,categorias:cats,obs:$('obs').value.trim().slice(0,500),lgpd:true,website:$('website').value};
+    if(window.RJ&&RJ.enabled()){if(!RJ.token()){show('err','Aguarde a verificação anti-robô terminar e tente de novo.');return}rec.turnstile=RJ.token()}
     if(kind==='pro')rec.experiencia=$('exp').value;
     var btn=$('send');btn.disabled=true;show('info','Enviando seu cadastro...');
     fetch('/api/lead',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(rec)})
       .then(function(r){return r.json().catch(function(){return {}}).then(function(d){return {ok:r.ok,d:d}})})
       .then(function(res){
-        btn.disabled=false;
+        btn.disabled=false;if(window.RJ)RJ.reset();
         if(!res.ok){show('err',res.d.error||'Não foi possível enviar agora. Tente de novo em instantes.');return}
         $('lead').reset();setKind(kind);
         show('ok',kind==='pro'?'Cadastro recebido. Vamos chamar você no WhatsApp para a verificação.':'Você está na lista. Avisamos no WhatsApp quando abrir na sua região.');
@@ -369,5 +371,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
 })();
 </script>
 
+<script src="/config.js"></script>
+<script src="/site.js"></script>
 </body>
 </html>

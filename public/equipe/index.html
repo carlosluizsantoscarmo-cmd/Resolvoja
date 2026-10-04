@@ -2,304 +2,377 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="robots" content="noindex,nofollow">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Painel Resolvo Já</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Resolvo Já</title>
+<meta name="description" content="Descreva o serviço, receba propostas de profissionais perto de você e contrate com segurança. Piloto na Serra, ES. Entre na lista.">
+<meta property="og:title" content="Resolvo Já">
+<meta property="og:description" content="Descreva o serviço, receba propostas e contrate com segurança. Piloto na Serra, ES.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://resolvoja.carlosluiz-santoscarmo.workers.dev/og.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#1F3BD1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231F3BD1'/%3E%3Ctext x='32' y='44' font-size='34' font-weight='800' text-anchor='middle' fill='%23FFC400' font-family='Arial'%3ERJ%3C/text%3E%3C/svg%3E">
+</head>
+<body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="/app/app-config.js"></script>
-<script>
-/* Para usar com dados reais, preencha as duas linhas abaixo (Supabase > Project Settings > API).
-   A chave "anon" pode ficar aqui: quem manda é a segurança por linha do banco. NUNCA coloque a chave service_role. */
-/* A URL e a chave pública vêm do mesmo arquivo do app (/app/app-config.js): preencha só lá. */
-window.RESOLVO_JA_CONFIG = { supabaseUrl: (window.RJ_APP||{}).url || "", supabaseAnonKey: (window.RJ_APP||{}).anonKey || "" };
-</script>
 <style>
+/* Layout: faixa azul de abertura com pedido + propostas lado a lado, depois seções claras em coluna única de leitura. */
 :root{
-  --bg:#F3F5FC;--surface:#FFFFFF;--text:#121A3A;--muted:#566080;--line:#D9DDEE;--soft:#E3E8FB;
-  --brand:#1F3BD1;--brand-ink:#FFFFFF;--sun:#FFC400;--sun-ink:#121A3A;
-  --ok:#0E7A52;--ok-bg:#DDF3EA;--warn:#8A4B06;--warn-bg:#FDEBCF;--err:#A12626;--err-bg:#FBE3E3;
+  --bg:#F3F5FC;--surface:#FFFFFF;--text:#121A3A;--muted:#566080;--line:#D9DDEE;
+  --brand:#1F3BD1;--brand-ink:#FFFFFF;--sun:#FFC400;--sun-ink:#121A3A;--ok:#0E7A52;--ok-bg:#DDF3EA;--err:#A12626;--err-bg:#FBE3E3;--soft:#E3E8FB;
+  --hero:#1F3BD1;--hero-ink:#FFFFFF;--hero-mut:#CBD3FA;
   --f-display:'Bricolage Grotesque','Trebuchet MS',system-ui,sans-serif;
   --f-body:'Figtree',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
-    --bg:#0D1230;--surface:#151B3E;--text:#EEF0FA;--muted:#A3ABCF;--line:#283062;--soft:#1F2757;
-    --brand:#8FA2FF;--brand-ink:#0D1230;--ok:#6FD6A8;--ok-bg:#12382B;--warn:#F6C47A;--warn-bg:#3F2B0E;--err:#FF9B9B;--err-bg:#431B1B;color-scheme:dark}
+    --bg:#0D1230;--surface:#151B3E;--text:#EEF0FA;--muted:#A3ABCF;--line:#283062;
+    --brand:#8FA2FF;--brand-ink:#0D1230;--ok:#6FD6A8;--ok-bg:#12382B;--err:#FF9B9B;--err-bg:#431B1B;--soft:#1F2757;
+    --hero:#16205F;--hero-ink:#FFFFFF;--hero-mut:#B6C0F2;color-scheme:dark}
 }
 :root[data-theme="dark"]{
-  --bg:#0D1230;--surface:#151B3E;--text:#EEF0FA;--muted:#A3ABCF;--line:#283062;--soft:#1F2757;
-  --brand:#8FA2FF;--brand-ink:#0D1230;--ok:#6FD6A8;--ok-bg:#12382B;--warn:#F6C47A;--warn-bg:#3F2B0E;--err:#FF9B9B;--err-bg:#431B1B;color-scheme:dark}
+  --bg:#0D1230;--surface:#151B3E;--text:#EEF0FA;--muted:#A3ABCF;--line:#283062;
+  --brand:#8FA2FF;--brand-ink:#0D1230;--ok:#6FD6A8;--ok-bg:#12382B;--err:#FF9B9B;--err-bg:#431B1B;--soft:#1F2757;
+  --hero:#16205F;--hero-ink:#FFFFFF;--hero-mut:#B6C0F2;color-scheme:dark}
+
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
-h1,h2,h3{font-family:var(--f-display);letter-spacing:-.02em;margin:0}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--f-body);font-size:17px;line-height:1.5;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--f-display);letter-spacing:-.02em;margin:0;text-wrap:balance}
+p{margin:0}
+a{color:inherit}
 :focus-visible{outline:3px solid var(--sun);outline-offset:2px}
-.wrap{max-width:1180px;margin-inline:auto;padding-inline:20px}
-header.top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
-.bar{display:flex;align-items:center;gap:14px;padding-block:12px;flex-wrap:wrap}
-.logo{font:800 22px var(--f-display);letter-spacing:-.02em;display:flex;gap:5px}
-.logo b{background:var(--sun);color:var(--sun-ink);padding:0 8px 2px;border-radius:10px 10px 10px 3px}
-.tag{font-weight:700;font-size:13px;background:var(--soft);color:var(--brand);padding:3px 10px;border-radius:999px}
-.sp{flex:1}
-.demo{background:var(--warn-bg);color:var(--warn);font-weight:600;font-size:14px;padding:8px 0;text-align:center}
-nav.tabs{display:flex;gap:4px;overflow-x:auto;padding-bottom:10px}
-.tab{flex:none;border:0;background:none;color:var(--muted);font:700 15px var(--f-body);padding:9px 14px;border-radius:10px;cursor:pointer;display:flex;gap:8px;align-items:center}
-.tab[aria-selected="true"]{background:var(--soft);color:var(--brand)}
-.count{font-size:12.5px;background:var(--err);color:var(--surface);border-radius:999px;padding:0 7px;min-width:20px;text-align:center}
-.count.zero{background:var(--line);color:var(--muted)}
-main{padding-block:24px 60px}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:26px}
-.kpi{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;min-width:0}
-.kpi span{display:block;color:var(--muted);font-size:14px;font-weight:600}
-.kpi b{display:block;font:800 28px var(--f-display);letter-spacing:-.02em;margin-top:2px}
-h2{font-size:24px;margin-bottom:4px}
-.sub{color:var(--muted);margin:0 0 16px}
-.tw{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px}
-table{border-collapse:collapse;width:100%;min-width:760px;font-size:15px}
-th{text-align:left;padding:11px 14px;background:var(--bg);color:var(--muted);font-size:13.5px;font-weight:700;white-space:nowrap}
-td{padding:12px 14px;border-top:1px solid var(--line);vertical-align:top}
-td small{display:block;color:var(--muted)}
-.num{font-variant-numeric:tabular-nums;white-space:nowrap}
-.pill{display:inline-block;font-weight:700;font-size:12.5px;padding:2px 9px;border-radius:999px;white-space:nowrap}
-.pill.ok{background:var(--ok-bg);color:var(--ok)} .pill.warn{background:var(--warn-bg);color:var(--warn)}
-.pill.err{background:var(--err-bg);color:var(--err)} .pill.info{background:var(--soft);color:var(--brand)}
-.btn{border:0;border-radius:10px;padding:9px 14px;font:700 14.5px var(--f-body);cursor:pointer;background:var(--brand);color:var(--brand-ink)}
-.btn.ghost{background:transparent;color:var(--text);border:1.5px solid var(--line)}
-.btn[disabled]{opacity:.45;cursor:not-allowed}
-.acts{display:flex;gap:6px;flex-wrap:wrap}
-select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;max-width:100%}
-.empty{padding:34px 20px;text-align:center;color:var(--muted)}
-.empty b{display:block;color:var(--text);font-size:17px}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--text);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:600;z-index:20;max-width:90vw}
-.toast.err{background:var(--err);color:#fff}
-.login{max-width:380px;margin:12vh auto;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:26px}
-.login label{display:block;font-weight:700;font-size:14.5px;margin:14px 0 6px}
-.login input{width:100%}
-.login .btn{width:100%;margin-top:18px;padding:12px}
-.msg{margin-top:12px;color:var(--err);font-weight:600;min-height:1.4em}
-.resolve{display:grid;gap:6px;min-width:230px}
-@media (max-width:640px){.wrap{padding-inline:16px}}
+.wrap{width:100%;max-width:1080px;margin-inline:auto;padding-inline:20px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:14px;padding:14px 22px;font:700 17px var(--f-body);cursor:pointer;text-decoration:none;background:var(--brand);color:var(--brand-ink)}
+.btn.sun{background:var(--sun);color:var(--sun-ink)}
+.btn.line{background:transparent;color:inherit;border:1.5px solid currentColor}
+.btn[disabled]{opacity:.6;cursor:default}
+
+/* topo + abertura */
+.hero{background:var(--hero);color:var(--hero-ink)}
+.nav{display:flex;align-items:center;gap:16px;padding-block:18px;flex-wrap:wrap}
+.logo{font:800 26px var(--f-display);letter-spacing:-.02em;text-decoration:none;display:flex;gap:6px}
+.logo b{background:var(--sun);color:var(--sun-ink);padding:0 9px 3px;border-radius:12px 12px 12px 3px}
+.nav .sp{flex:1}
+.nav a.l{font-weight:600;text-decoration:none;color:var(--hero-mut)}
+.nav a.l:hover{color:var(--hero-ink)}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:44px;align-items:center;padding-block:34px 64px}
+.hero h1{font-size:clamp(38px,6vw,64px);line-height:1.02;font-weight:800}
+.hero .lead{margin-top:18px;font-size:19px;color:var(--hero-mut);max-width:34em}
+.cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+.hero .btn.line{color:var(--hero-ink)}
+.fine{margin-top:16px;font-size:14px;color:var(--hero-mut)}
+
+/* demonstração do pedido e das propostas */
+.demo{background:var(--surface);color:var(--text);border-radius:26px;padding:20px;box-shadow:0 24px 60px rgba(7,12,50,.35);min-width:0}
+.req{background:var(--bg);border-radius:16px;padding:14px 16px}
+.req small{color:var(--muted);font-size:13.5px}
+.req b{display:block;font:800 18px var(--f-display);margin-top:2px}
+.demo h3{font-size:15px;color:var(--muted);font-family:var(--f-body);font-weight:700;letter-spacing:0;margin:16px 2px 8px}
+.prop{display:flex;align-items:center;gap:12px;border:1.5px solid var(--line);border-radius:16px;padding:12px;margin-bottom:8px;min-width:0}
+.prop.best{border-color:var(--brand);box-shadow:0 0 0 3px var(--soft)}
+.av{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:#fff;font:800 15px var(--f-display)}
+.prop .t{flex:1;min-width:0}
+.prop .t b{display:block}
+.prop .t span{font-size:14px;color:var(--muted)}
+.prop .v{font:800 21px var(--f-display);letter-spacing:-.02em;white-space:nowrap}
+.tag{display:inline-block;font:700 12.5px var(--f-body);padding:2px 8px;border-radius:999px;background:var(--ok-bg);color:var(--ok);margin-left:6px;vertical-align:2px}
+
+/* seções */
+section{padding-block:68px}
+section.alt{background:var(--surface)}
+.sec-h{max-width:640px;margin-bottom:34px}
+.sec-h h2{font-size:clamp(28px,4vw,40px);line-height:1.08;font-weight:800}
+.sec-h p{margin-top:12px;color:var(--muted);font-size:18px}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;list-style:none;margin:0;padding:0;counter-reset:s}
+.steps li{counter-increment:s;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:24px;min-width:0}
+.alt .steps li{background:var(--bg)}
+.steps li::before{content:counter(s);display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:var(--sun);color:var(--sun-ink);font:800 19px var(--f-display);margin-bottom:14px}
+.steps h3{font-size:21px;margin-bottom:6px}
+.steps p{color:var(--muted)}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px;align-items:start}
+.facts{display:grid;gap:14px;list-style:none;margin:0;padding:0}
+.facts li{display:flex;gap:14px;min-width:0}
+.facts li > span{flex:none;width:42px;height:42px;border-radius:13px;background:var(--soft);color:var(--brand);display:grid;place-items:center}
+.facts b{display:block;font-size:18px}
+.facts p{color:var(--muted);font-size:16px}
+.ic{display:block}
+.money{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:24px;min-width:0}
+.alt .money{background:var(--bg)}
+.money h3{font-size:20px;margin-bottom:14px}
+.mrow{display:flex;justify-content:space-between;gap:12px;padding-block:10px;border-top:1px solid var(--line)}
+.mrow:first-of-type{border-top:0}
+.mrow.total{font-weight:800;font-size:19px}
+.money small{display:block;margin-top:12px;color:var(--muted);font-size:14px}
+.places{display:flex;flex-wrap:wrap;gap:10px}
+.place{padding:10px 16px;border-radius:999px;border:1.5px solid var(--line);font-weight:600;background:var(--surface)}
+.place.on{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.cats{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.cats .place{font-size:15px}
+.cats .place.soon{color:var(--muted);border-style:dashed}
+
+/* perguntas frequentes */
+.faq{max-width:760px;margin-inline:auto;display:grid;gap:10px}
+.faq details{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:0 18px}
+.alt .faq details{background:var(--bg)}
+.faq summary{cursor:pointer;font:700 18px var(--f-body);padding:16px 0;list-style:none;display:flex;justify-content:space-between;gap:12px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font:700 24px var(--f-body);color:var(--brand);line-height:1}
+.faq details[open] summary::after{content:"\2212"}
+.faq details p{color:var(--muted);padding:0 0 16px}
+.faq a{color:var(--brand)}
+
+/* formulário */
+.form-card{background:var(--surface);border:1px solid var(--line);border-radius:26px;padding:28px;max-width:720px;margin-inline:auto;box-shadow:0 14px 40px rgba(18,26,58,.08)}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--bg);padding:4px;border-radius:14px;margin-bottom:22px}
+.seg button{border:0;background:none;color:var(--muted);font:700 16px var(--f-body);padding:12px 8px;border-radius:11px;cursor:pointer}
+.seg button[aria-selected="true"]{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(18,26,58,.2)}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.fields .full{grid-column:1/-1}
+label.l,.lbl{display:block;font-weight:700;font-size:15px;margin-bottom:6px}
+input[type=text],input[type=tel],select,textarea{width:100%;border:1.5px solid var(--line);background:var(--bg);color:var(--text);border-radius:12px;padding:12px 14px;font:500 17px var(--f-body)}
+textarea{min-height:92px;resize:vertical}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:15px;color:var(--muted)}
+.chk input{margin-top:4px;width:18px;height:18px;accent-color:var(--brand)}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill input{position:absolute;opacity:0;pointer-events:none}
+.pill span{display:inline-block;padding:9px 14px;border-radius:999px;border:1.5px solid var(--line);font-weight:600;font-size:15px;cursor:pointer;background:var(--bg)}
+.pill input:checked + span{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.pill input:focus-visible + span{outline:3px solid var(--sun);outline-offset:2px}
+.msg{margin-top:16px;padding:14px 16px;border-radius:14px;font-weight:600}
+.msg.ok{background:var(--ok-bg);color:var(--ok)}
+.msg.err{background:var(--err-bg);color:var(--err)}
+.msg.info{background:var(--soft);color:var(--text)}
+
+/* painel do dono */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:22px;margin-top:40px}
+.panel h3{font-size:22px;margin-bottom:4px}
+.tw{overflow-x:auto;margin-top:14px;border:1px solid var(--line);border-radius:14px}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:15px}
+th{text-align:left;padding:10px 12px;background:var(--bg);color:var(--muted);font-weight:700;font-size:14px}
+td{padding:10px 12px;border-top:1px solid var(--line);vertical-align:top}
+footer{padding-block:40px;color:var(--muted);font-size:15px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
+
+@media (max-width:860px){
+  .hero-grid,.split{grid-template-columns:minmax(0,1fr);gap:32px}
+  .hero-grid{padding-block:20px 44px}
+  .steps{grid-template-columns:minmax(0,1fr)}
+  section{padding-block:48px}
+}
+@media (max-width:560px){
+  .fields{grid-template-columns:minmax(0,1fr)}
+  .form-card{padding:20px}
+  body{font-size:16px}
+  .nav a.l{display:none}
+}
+@media (prefers-reduced-motion:no-preference){
+  .prop.best{animation:pop .5s .3s both ease-out}
+  @keyframes pop{from{transform:scale(.97)}to{transform:none}}
+}
 </style>
-</head>
-<body>
-<div id="app"></div>
+
+<header class="hero">
+ <div class="wrap">
+  <nav class="nav" aria-label="Principal">
+   <a class="logo" href="#topo">Resolvo<b>Já</b></a>
+   <span class="sp"></span>
+   <a class="l" href="#como">Como funciona</a>
+   <a class="l" href="#profissionais">Para profissionais</a>
+   <a class="l" href="#faq">Perguntas</a>
+   <a class="l" href="/app/">Abrir o app</a>
+   <a class="btn sun" style="padding:10px 16px;font-size:15px" href="#cadastro">Entrar na lista</a>
+  </nav>
+  <div class="hero-grid" id="topo">
+   <div>
+    <h1>Descreva o serviço. Receba propostas. Contrate com segurança.</h1>
+    <p class="lead">O Resolvo Já conecta moradores da Serra e da Grande Vitória a eletricistas, encanadores e montadores que atendem perto de casa. Você compara preço, avaliação e horário antes de decidir.</p>
+    <div class="cta">
+     <a class="btn sun" href="#cadastro" data-pick="cliente">Quero contratar</a>
+     <a class="btn line" href="#cadastro" data-pick="pro">Sou profissional</a>
+    </div>
+    <p class="fine">Piloto em preparação na Serra. Entre na lista para ser avisado quando abrir na sua região. Já recebeu acesso? <a href="/app/">Abrir o app</a>.</p>
+   </div>
+   <div class="demo" aria-label="Exemplo de pedido e propostas">
+    <div class="req"><small>Pedido enviado há 8 minutos · Laranjeiras, Serra</small><b>Montar guarda-roupa de 6 portas</b></div>
+    <h3>3 propostas recebidas</h3>
+    <div class="prop best"><span class="av" style="background:#1F3BD1">MV</span><div class="t"><b>Marcos Vinícius<span class="tag">Verificado</span></b><span>★ 4,9 · 112 avaliações · amanhã, 14h</span></div><div class="v">R$ 160</div></div>
+    <div class="prop"><span class="av" style="background:#0E8A5F">AS</span><div class="t"><b>Ademir Souza</b><span>★ 4,7 · 58 avaliações · domingo, 9h</span></div><div class="v">R$ 140</div></div>
+    <div class="prop"><span class="av" style="background:#B4470C">CF</span><div class="t"><b>Carlos &amp; Filho</b><span>★ 4,8 · 203 avaliações · hoje, 17h</span></div><div class="v">R$ 190</div></div>
+    <p style="font-size:13px;color:var(--muted);margin-top:10px">Exemplo ilustrativo. Nomes e valores fictícios.</p>
+   </div>
+  </div>
+ </div>
+</header>
+
+<main>
+<section id="como">
+ <div class="wrap">
+  <div class="sec-h"><h2>Do pedido ao serviço feito, sem sair do aplicativo</h2><p>Três passos para o cliente. Nenhum cadastro de cartão antes de escolher o profissional.</p></div>
+  <ol class="steps">
+   <li><h3>Conte o que precisa</h3><p>Escreva o problema, mande fotos e diga quando quer. Leva cerca de dois minutos.</p></li>
+   <li><h3>Compare as propostas</h3><p>Profissionais da sua região respondem com preço, prazo e horário. Veja nota, serviços feitos e avaliações reais.</p></li>
+   <li><h3>Contrate e acompanhe</h3><p>Pague pelo app, converse pelo chat e confirme quando o serviço terminar. O valor só chega ao profissional depois da sua confirmação.</p></li>
+  </ol>
+  <div class="cats" aria-label="Categorias do piloto">
+   <span class="place">Eletricista</span><span class="place">Encanador</span><span class="place">Montador de móveis</span>
+   <span class="place soon">Pintor · em breve</span><span class="place soon">Diarista · em breve</span><span class="place soon">Fretes · em breve</span>
+  </div>
+ </div>
+</section>
+
+<section class="alt" id="profissionais">
+ <div class="wrap split">
+  <div>
+   <div class="sec-h" style="margin-bottom:24px"><h2>Para quem vive do próprio trabalho</h2><p>Receba pedidos de clientes que já decidiram contratar, na sua região e nas suas categorias.</p></div>
+   <ul class="facts">
+    <li><span><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></span><div><b>Pedidos perto de você</b><p>Você escolhe os bairros e as categorias que atende. Só vê pedidos que cabem na sua rotina.</p></div></li>
+    <li><span><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></span><div><b>Pagamento garantido</b><p>O cliente paga ao contratar. Você faz o serviço sabendo que o valor está reservado.</p></div></li>
+    <li><span><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></span><div><b>Agenda e ganhos num lugar</b><p>Veja os serviços do dia, quanto já ganhou no mês e saque por Pix.</p></div></li>
+   </ul>
+  </div>
+  <div class="money">
+   <h3>Quanto fica com você</h3>
+   <div class="mrow"><span>Serviço de montagem</span><b>R$ 180,00</b></div>
+   <div class="mrow"><span>Comissão do Resolvo Já (10%)</span><b>− R$ 18,00</b></div>
+   <div class="mrow total"><span>Você recebe</span><b>R$ 162,00</b></div>
+   <small>A comissão é cobrada só quando o serviço é contratado e pago pelo app. Entrar na lista é grátis. Exemplo para ilustrar o cálculo.</small>
+   <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line)"><b style="display:block;font-size:18px">Profissional verificado</b><p style="color:var(--muted);margin:4px 0 12px;font-size:15.5px">Taxa única de <b>R$ 29,90</b>, opcional, para conferirmos seus dados e liberarmos o selo no app. Você tem 7 dias para desistir e receber o reembolso. A taxa não garante pedidos.</p><a class="btn" href="/pagar.html" style="width:100%">Quero ser verificado</a></div>
+  </div>
+ </div>
+</section>
+
+<section id="onde">
+ <div class="wrap">
+  <div class="sec-h"><h2>Começamos pequeno, na Serra</h2><p>O piloto abre em poucos bairros e cresce conforme houver profissionais disponíveis. Quem entrar na lista agora é avisado primeiro.</p></div>
+  <div class="places" aria-label="Regiões do piloto">
+   <span class="place on">Laranjeiras</span><span class="place on">Carapina</span><span class="place on">Valparaíso</span><span class="place on">Jardim Limoeiro</span><span class="place on">Manguinhos</span>
+   <span class="place">Jacaraípe · depois</span><span class="place">Vitória · depois</span><span class="place">Vila Velha · depois</span><span class="place">Cariacica · depois</span>
+  </div>
+ </div>
+</section>
+
+<section class="alt" id="cadastro">
+ <div class="wrap">
+  <div class="sec-h" style="margin-inline:auto;text-align:center"><h2>Entre na lista do piloto</h2><p>Deixe seus dados e avisamos quando o Resolvo Já abrir na sua região.</p></div>
+  <div class="form-card">
+   <div class="seg" role="tablist" aria-label="Tipo de cadastro">
+    <button type="button" role="tab" id="tab-cliente" aria-selected="true" data-kind="cliente">Quero contratar</button>
+    <button type="button" role="tab" id="tab-pro" aria-selected="false" data-kind="pro">Sou profissional</button>
+   </div>
+   <form id="lead" novalidate>
+    <div class="fields">
+     <div><label class="l" for="nome">Nome</label><input id="nome" type="text" autocomplete="name" required></div>
+     <div><label class="l" for="zap">WhatsApp com DDD</label><input id="zap" type="tel" inputmode="tel" autocomplete="tel" placeholder="(27) 9 0000-0000" required></div>
+     <div><label class="l" for="bairro">Bairro</label><input id="bairro" type="text" autocomplete="address-level3" placeholder="Ex.: Laranjeiras" required></div>
+     <div><label class="l" for="cidade">Cidade</label>
+      <select id="cidade"><option>Serra</option><option>Vitória</option><option>Vila Velha</option><option>Cariacica</option><option>Outra</option></select></div>
+     <div class="full" id="box-cli">
+      <span class="lbl" id="l-cli">Que serviço você costuma precisar?</span>
+      <div class="pills" role="group" aria-labelledby="l-cli">
+       <label class="pill"><input type="checkbox" name="cat-cli" value="Eletricista"><span>Eletricista</span></label>
+       <label class="pill"><input type="checkbox" name="cat-cli" value="Encanador"><span>Encanador</span></label>
+       <label class="pill"><input type="checkbox" name="cat-cli" value="Montador"><span>Montador</span></label>
+       <label class="pill"><input type="checkbox" name="cat-cli" value="Pintor"><span>Pintor</span></label>
+       <label class="pill"><input type="checkbox" name="cat-cli" value="Diarista"><span>Diarista</span></label>
+       <label class="pill"><input type="checkbox" name="cat-cli" value="Fretes"><span>Fretes</span></label>
+      </div>
+     </div>
+     <div class="full" id="box-pro" hidden>
+      <span class="lbl" id="l-pro">O que você faz?</span>
+      <div class="pills" role="group" aria-labelledby="l-pro">
+       <label class="pill"><input type="checkbox" name="cat-pro" value="Eletricista"><span>Eletricista</span></label>
+       <label class="pill"><input type="checkbox" name="cat-pro" value="Encanador"><span>Encanador</span></label>
+       <label class="pill"><input type="checkbox" name="cat-pro" value="Montador"><span>Montador</span></label>
+       <label class="pill"><input type="checkbox" name="cat-pro" value="Pintor"><span>Pintor</span></label>
+       <label class="pill"><input type="checkbox" name="cat-pro" value="Diarista"><span>Diarista</span></label>
+       <label class="pill"><input type="checkbox" name="cat-pro" value="Fretes"><span>Fretes</span></label>
+      </div>
+     </div>
+     <div class="full" id="box-exp" hidden><label class="l" for="exp">Há quanto tempo trabalha na área?</label>
+      <select id="exp"><option>Menos de 1 ano</option><option>1 a 3 anos</option><option selected>3 a 10 anos</option><option>Mais de 10 anos</option></select></div>
+     <div class="full"><label class="l" for="obs">Quer contar mais? (opcional)</label><textarea id="obs" placeholder="Ex.: preciso de montagem de móveis todo mês"></textarea></div>
+     <div class="full"><label class="chk" for="lgpd"><input id="lgpd" type="checkbox"><span>Autorizo o Resolvo Já a usar meus dados só para me avisar sobre o piloto, conforme a LGPD. Leia a <a href="/privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>. Posso pedir a exclusão a qualquer momento.</span></label></div>
+    </div>
+    <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true"><label>Não preencha este campo<input type="text" id="website" tabindex="-1" autocomplete="off"></label></div>
+    <div id="cf-turnstile" style="margin-top:18px"></div>
+    <div style="margin-top:22px"><button class="btn" type="submit" id="send" style="width:100%">Entrar na lista</button></div>
+    <div id="out" role="status" aria-live="polite"></div>
+   </form>
+  </div>
+
+
+ </div>
+</section>
+<section id="faq">
+ <div class="wrap">
+  <div class="sec-h" style="margin-inline:auto;text-align:center"><h2>Perguntas frequentes</h2><p>O que a maioria quer saber antes de entrar.</p></div>
+  <div class="faq">
+   <details><summary>Quanto custa para quem contrata?</summary><p>Entrar na lista e pedir propostas não custa nada. Você paga apenas o serviço que decidir contratar, pelo aplicativo.</p></details>
+   <details><summary>Quanto custa para o profissional?</summary><p>Entrar na lista é grátis. Quando o app abrir, o Resolvo Já fica com 10% de cada serviço contratado e pago pelo app, e você recebe o resto. A verificação do perfil é opcional e custa R$ 29,90, uma única vez.</p></details>
+   <details><summary>O que é a verificação de profissional?</summary><p>Conferimos seus dados cadastrais e, quando o app estiver disponível, você recebe o selo "Profissional verificado". Ela ajuda a passar confiança, mas não garante a quantidade de pedidos.</p></details>
+   <details><summary>Posso pedir o dinheiro de volta?</summary><p>Sim. Você tem 7 dias corridos depois do pagamento para desistir e receber o reembolso integral. Veja os <a href="/termos.html">Termos e reembolso</a>.</p></details>
+   <details><summary>Quando o aplicativo abre?</summary><p>O piloto começa por poucos bairros da Serra. Quem está na lista é avisado pelo WhatsApp antes de todo mundo.</p></details>
+   <details><summary>Meus dados estão seguros?</summary><p>Usamos seus dados só para falar sobre o piloto e você pode pedir a exclusão quando quiser. Pagamentos são feitos no Mercado Pago, e não guardamos dados de cartão. Leia a <a href="/privacidade.html">Política de Privacidade</a>.</p></details>
+   <details><summary>Onde vocês atendem?</summary><p>Começamos na Serra e na Grande Vitória, ES, e crescemos conforme houver profissionais disponíveis em cada região.</p></details>
+  </div>
+ </div>
+</section>
+</main>
+
+<footer>
+ <div class="wrap"><span><b>Resolvo Já</b> · Conectando quem precisa com quem sabe fazer.</span><span><a href="/termos.html" style="color:inherit">Termos e reembolso</a> · <a href="/privacidade.html" style="color:inherit">Política de Privacidade</a> · Serra, Espírito Santo</span></div>
+</footer>
 
 <script>
 (function(){
-  var CFG = window.RESOLVO_JA_CONFIG || {};
-  var LIVE = !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
-  var $app = document.getElementById('app');
-  var state = { tab:'cadastros', pros:[], reqs:[], disputes:[], payouts:[], audit:[], user:null };
-
-  /* ---------------------------------------------------------- utilidades */
-  function esc(s){ var d=document.createElement('div'); d.textContent = s==null ? '' : String(s); return d.innerHTML; }
-  function money(c){ return (c/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
-  function when(iso){ var d=new Date(iso); return isNaN(d) ? '' : d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }
-  var STATUS_REQ = { open:['Aberto','info'], awaiting_payment:['Aguardando pagamento','warn'], hired:['Contratado','info'], completed:['Concluído','ok'], cancelled:['Cancelado','err'], disputed:['Em disputa','err'] };
-  var STATUS_PAYOUT = { requested:['Pedido','warn'], paid:['Pago','ok'], failed:['Recusado','err'] };
-  var STATUS_DISPUTE = { open:['Aberta','err'], resolved_refund:['Reembolsada','info'], resolved_partial:['Parcial','info'], resolved_release:['Liberada','ok'] };
-  var STATUS_PRO = { pending:['Pendente','warn'], approved:['Aprovado','ok'], suspended:['Suspenso','err'] };
-  function pill(map,k){ var m=map[k]||[k,'info']; return '<span class="pill '+m[1]+'">'+esc(m[0])+'</span>'; }
-  function toast(msg,isErr){
-    Array.prototype.forEach.call(document.querySelectorAll('.toast'), function(x){ x.remove(); });
-    var t=document.createElement('div'); t.className='toast'+(isErr?' err':''); t.setAttribute('role','status'); t.textContent=msg;
-    document.body.appendChild(t); setTimeout(function(){ t.remove(); }, 3200);
+  var kind='cliente';
+  var $=function(id){return document.getElementById(id)};
+  function setKind(k){
+    kind=k;
+    $('tab-cliente').setAttribute('aria-selected',String(k==='cliente'));
+    $('tab-pro').setAttribute('aria-selected',String(k==='pro'));
+    $('box-cli').hidden=k!=='cliente';
+    $('box-pro').hidden=k!=='pro';
+    $('box-exp').hidden=k!=='pro';
+    $('send').textContent=k==='pro'?'Cadastrar como profissional':'Entrar na lista';
+    $('obs').placeholder=k==='pro'?'Ex.: atendo à noite e aos sábados':'Ex.: preciso de montagem de móveis todo mês';
   }
+  document.querySelectorAll('[data-kind]').forEach(function(b){b.addEventListener('click',function(){setKind(b.dataset.kind)})});
+  document.querySelectorAll('[data-pick]').forEach(function(a){a.addEventListener('click',function(){setKind(a.dataset.pick)})});
 
-  /* ---------------------------------------------------------- dados de demonstração */
-  var demo = {
-    pros:[
-      {user_id:'p1',name:'Rodrigo Pires',phone:'(27) 9 9911-2233',status:'pending',years_exp:6,categories:'Eletricista',accepted_terms:true,document_path:'documentos/p1/rg.jpg',created_at:'2026-10-02T09:10:00Z'},
-      {user_id:'p2',name:'Luciana Torres',phone:'(27) 9 9822-4411',status:'pending',years_exp:3,categories:'Montador',accepted_terms:true,document_path:'documentos/p2/rg.jpg',created_at:'2026-10-02T06:40:00Z'},
-      {user_id:'p3',name:'Edmilson Barros',phone:'(27) 9 9733-0099',status:'pending',years_exp:12,categories:'Encanador',accepted_terms:false,document_path:'documentos/p3/rg.jpg',created_at:'2026-10-01T18:05:00Z'},
-      {user_id:'p4',name:'Marcos Vinícius',phone:'(27) 9 9644-8800',status:'approved',years_exp:8,categories:'Montador',accepted_terms:true,document_path:'documentos/p4/rg.jpg',created_at:'2026-09-20T11:00:00Z'}
-    ],
-    reqs:[
-      {id:'r1',title:'Montar guarda-roupa de 6 portas',status:'hired',created_at:'2026-10-02T10:02:00Z',categories:{name:'Montador'}},
-      {id:'r2',title:'Trocar chuveiro elétrico',status:'open',created_at:'2026-10-02T09:30:00Z',categories:{name:'Eletricista'}},
-      {id:'r3',title:'Vazamento na pia da cozinha',status:'disputed',created_at:'2026-09-30T15:12:00Z',categories:{name:'Encanador'}},
-      {id:'r4',title:'Instalar prateleiras e nichos',status:'completed',created_at:'2026-09-28T08:45:00Z',categories:{name:'Montador'}}
-    ],
-    disputes:[
-      {id:'d1',reason:'O vazamento voltou no dia seguinte ao serviço.',status:'open',created_at:'2026-10-01T20:00:00Z',service_requests:{title:'Vazamento na pia da cozinha'}}
-    ],
-    payouts:[
-      {id:'s1',amount_cents:16200,pix_key:'marcos@exemplo.com',status:'requested',requested_at:'2026-10-02T08:20:00Z',pro_profiles:{profiles:{name:'Marcos Vinícius'}}},
-      {id:'s2',amount_cents:9000,pix_key:'(27) 9 9644-8800',status:'paid',requested_at:'2026-09-29T10:00:00Z',pro_profiles:{profiles:{name:'Marcos Vinícius'}}}
-    ]
-  };
+  function show(cls,text){$('out').innerHTML='<div class="msg '+cls+'"></div>';$('out').firstChild.textContent=text}
 
-  /* ---------------------------------------------------------- acesso aos dados */
-  var api;
-  if(!LIVE){
-    api = {
-      login:function(){ return Promise.resolve({name:'Equipe Resolvo Já (demonstração)'}); },
-      logout:function(){ return Promise.resolve(); },
-      load:function(){ state.pros=demo.pros; state.reqs=demo.reqs; state.disputes=demo.disputes; state.payouts=demo.payouts; return Promise.resolve(); },
-      setPro:function(id,status){ demo.pros.forEach(function(p){ if(p.user_id===id) p.status=status; }); return Promise.resolve(); },
-      resolve:function(id,outcome){
-        demo.disputes.forEach(function(d){ if(d.id===id) d.status=outcome; });
-        demo.reqs.forEach(function(r){ if(r.status==='disputed') r.status = outcome==='resolved_refund' ? 'cancelled' : 'completed'; });
-        return Promise.resolve();
-      },
-      payout:function(id,status){ demo.payouts.forEach(function(p){ if(p.id===id) p.status=status; }); return Promise.resolve(); }
-    };
-  } else {
-    var sb = null;
-    var need = function(r){ if(r.error) throw new Error(r.error.message); return r.data; };
-    api = {
-      init:function(){
-        return new Promise(function(res,rej){
-          var s=document.createElement('script');
-          s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
-          s.onload=function(){ sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey); res(); };
-          s.onerror=function(){ rej(new Error('Não foi possível carregar a biblioteca do Supabase.')); };
-          document.head.appendChild(s);
-        });
-      },
-      login:function(email,pass){
-        return sb.auth.signInWithPassword({email:email,password:pass}).then(function(r){
-          if(r.error) throw new Error('E-mail ou senha incorretos.');
-          return sb.from('profiles').select('name,role').eq('id', r.data.user.id).single().then(function(p){
-            if(p.error || !p.data || p.data.role!=='admin'){ return sb.auth.signOut().then(function(){ throw new Error('Esta conta não faz parte da equipe.'); }); }
-            return {name:p.data.name};
-          });
-        });
-      },
-      logout:function(){ return sb.auth.signOut(); },
-      load:function(){
-        return Promise.all([
-          sb.from('admin_pro_queue').select('*').order('created_at',{ascending:false}),
-          sb.from('service_requests').select('id,title,status,created_at,categories(name)').order('created_at',{ascending:false}).limit(100),
-          sb.from('disputes').select('id,reason,status,created_at,service_requests(title)').order('created_at',{ascending:false}).limit(100),
-          sb.from('payouts').select('id,amount_cents,pix_key,status,requested_at,pro_profiles(profiles(name))').order('requested_at',{ascending:false}).limit(100)
-        ]).then(function(r){ state.pros=need(r[0])||[]; state.reqs=need(r[1])||[]; state.disputes=need(r[2])||[]; state.payouts=need(r[3])||[]; });
-      },
-      setPro:function(id,status){ return sb.rpc('set_pro_status',{p_pro:id,p_status:status}).then(need); },
-      resolve:function(id,outcome,note){ return sb.rpc('resolve_dispute',{p_dispute:id,p_outcome:outcome,p_note:note}).then(need); },
-      payout:function(id,status){ return sb.rpc(status==='paid'?'mark_payout_paid':'mark_payout_failed',{p_payout:id}).then(need); }
-    };
-  }
-
-  /* ---------------------------------------------------------- telas */
-  function renderLogin(msg){
-    $app.innerHTML =
-      (LIVE ? '' : '<div class="demo">Modo demonstração: os dados são de exemplo e nada é salvo.</div>') +
-      '<form class="login" id="loginForm"><div class="logo" style="font-size:28px">Resolvo<b>Já</b></div>' +
-      '<p style="color:var(--muted);margin:8px 0 0">Painel da equipe</p>' +
-      (LIVE ? '<label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required>' +
-              '<label for="pass">Senha</label><input id="pass" type="password" autocomplete="current-password" required>' : '') +
-      '<button class="btn" type="submit">' + (LIVE ? 'Entrar' : 'Ver demonstração') + '</button>' +
-      '<div class="msg" id="loginMsg" role="alert">' + esc(msg||'') + '</div></form>';
-    document.getElementById('loginForm').addEventListener('submit', function(e){
-      e.preventDefault();
-      var email = LIVE ? document.getElementById('email').value.trim() : '';
-      var pass = LIVE ? document.getElementById('pass').value : '';
-      var m = document.getElementById('loginMsg'); m.textContent='';
-      api.login(email,pass).then(function(u){ state.user=u; return api.load(); }).then(renderApp)
-        .catch(function(err){ m.textContent = err.message; });
-    });
-  }
-
-  function counts(){
-    return {
-      cadastros: state.pros.filter(function(p){return p.status==='pending';}).length,
-      pedidos: state.reqs.filter(function(r){return r.status==='disputed';}).length,
-      disputas: state.disputes.filter(function(d){return d.status==='open';}).length,
-      saques: state.payouts.filter(function(p){return p.status==='requested';}).length
-    };
-  }
-
-  function renderApp(){
-    var c = counts();
-    var tabs = [['cadastros','Cadastros',c.cadastros],['pedidos','Pedidos',null],['disputas','Disputas',c.disputas],['saques','Saques',c.saques]];
-    var open = state.payouts.filter(function(p){return p.status==='requested';}).reduce(function(a,p){return a+p.amount_cents;},0);
-    $app.innerHTML =
-      (LIVE ? '' : '<div class="demo">Modo demonstração: os dados são de exemplo e nada é salvo.</div>') +
-      '<header class="top"><div class="wrap"><div class="bar"><div class="logo">Resolvo<b>Já</b></div><span class="tag">Painel da equipe</span><span class="sp"></span>' +
-      '<span style="color:var(--muted);font-size:14px">'+esc(state.user.name)+'</span><button class="btn ghost" id="out">Sair</button></div>' +
-      '<nav class="tabs" role="tablist">' + tabs.map(function(t){
-        return '<button class="tab" role="tab" aria-selected="'+(state.tab===t[0])+'" data-tab="'+t[0]+'">'+t[1]+(t[2]===null?'':' <span class="count'+(t[2]?'':' zero')+'">'+t[2]+'</span>')+'</button>';
-      }).join('') + '</nav></div></header>' +
-      '<main class="wrap"><div class="kpis">' +
-        kpi('Cadastros para verificar', c.cadastros) + kpi('Pedidos em disputa', c.pedidos) +
-        kpi('Disputas abertas', c.disputas) + kpi('Saques a pagar', money(open)) +
-      '</div><section id="view"></section></main>';
-    document.getElementById('out').addEventListener('click', function(){ api.logout().then(function(){ state.user=null; renderLogin(); }); });
-    Array.prototype.forEach.call(document.querySelectorAll('[data-tab]'), function(b){ b.addEventListener('click', function(){ state.tab=b.getAttribute('data-tab'); renderApp(); }); });
-    renderView();
-  }
-  function kpi(l,v){ return '<div class="kpi"><span>'+esc(l)+'</span><b>'+esc(v)+'</b></div>'; }
-  function empty(t,s){ return '<div class="empty"><b>'+esc(t)+'</b>'+esc(s)+'</div>'; }
-
-  function renderView(){
-    var v = document.getElementById('view'), h='';
-    if(state.tab==='cadastros'){
-      var list = state.pros.slice().sort(function(a,b){ return (a.status==='pending'?0:1)-(b.status==='pending'?0:1); });
-      h = '<h2>Cadastros de profissionais</h2><p class="sub">Aprove só depois de conferir o documento. Sem o aceite do termo, o banco não deixa aprovar.</p>';
-      h += list.length ? '<div class="tw"><table><thead><tr><th>Profissional</th><th>Categorias</th><th>Experiência</th><th>Termo</th><th>Documento</th><th>Enviado</th><th>Status</th><th>Ação</th></tr></thead><tbody>' +
-        list.map(function(p){
-          var pend = p.status==='pending';
-          return '<tr><td><b>'+esc(p.name)+'</b><small>'+esc(p.phone||'')+'</small></td><td>'+esc(p.categories||'')+'</td><td class="num">'+esc(p.years_exp==null?'':p.years_exp+' anos')+'</td>' +
-            '<td>'+(p.accepted_terms?'<span class="pill ok">Aceito</span>':'<span class="pill err">Não aceito</span>')+'</td><td><small>'+esc(p.document_path||'sem documento')+'</small></td><td class="num">'+esc(when(p.created_at))+'</td><td>'+pill(STATUS_PRO,p.status)+'</td>' +
-            '<td><div class="acts">' +
-              (p.status!=='approved' ? '<button class="btn" data-pro="'+esc(p.user_id)+'" data-to="approved"'+(p.accepted_terms?'':' disabled title="O profissional ainda não aceitou o termo"')+'>Aprovar</button>' : '') +
-              (p.status==='pending' ? '<button class="btn ghost" data-pro="'+esc(p.user_id)+'" data-to="suspended">Recusar</button>' : '') +
-              (p.status==='approved' ? '<button class="btn ghost" data-pro="'+esc(p.user_id)+'" data-to="suspended">Suspender</button>' : '') +
-            '</div></td></tr>';
-        }).join('') + '</tbody></table></div>' : empty('Nenhum cadastro ainda','Os profissionais aparecem aqui assim que se cadastrarem.');
-    } else if(state.tab==='pedidos'){
-      h = '<h2>Pedidos</h2><p class="sub">Os 100 mais recentes. Pedidos em disputa aparecem marcados.</p>';
-      h += state.reqs.length ? '<div class="tw"><table><thead><tr><th>Pedido</th><th>Categoria</th><th>Criado</th><th>Status</th></tr></thead><tbody>' +
-        state.reqs.map(function(r){ return '<tr><td><b>'+esc(r.title)+'</b></td><td>'+esc(r.categories&&r.categories.name||'')+'</td><td class="num">'+esc(when(r.created_at))+'</td><td>'+pill(STATUS_REQ,r.status)+'</td></tr>'; }).join('') +
-        '</tbody></table></div>' : empty('Nenhum pedido ainda','Quando os clientes pedirem serviços, eles aparecem aqui.');
-    } else if(state.tab==='disputas'){
-      h = '<h2>Disputas</h2><p class="sub">Enquanto a disputa estiver aberta, o valor fica retido e a confirmação automática não roda.</p>';
-      h += state.disputes.length ? '<div class="tw"><table><thead><tr><th>Pedido</th><th>Motivo</th><th>Aberta</th><th>Status</th><th>Decisão da equipe</th></tr></thead><tbody>' +
-        state.disputes.map(function(d){
-          var isOpen = d.status==='open';
-          return '<tr><td><b>'+esc(d.service_requests&&d.service_requests.title||'')+'</b></td><td style="max-width:300px">'+esc(d.reason)+'</td><td class="num">'+esc(when(d.created_at))+'</td><td>'+pill(STATUS_DISPUTE,d.status)+'</td><td>' +
-            (isOpen ? '<div class="resolve"><select aria-label="Decisão" id="o-'+esc(d.id)+'"><option value="resolved_refund">Reembolsar o cliente</option><option value="resolved_release">Liberar ao profissional</option><option value="resolved_partial">Parcial (estorno manual)</option></select>' +
-              '<input id="n-'+esc(d.id)+'" placeholder="Explique a decisão" aria-label="Explicação da decisão"><button class="btn" data-disp="'+esc(d.id)+'">Decidir</button></div>' : '') +
-            '</td></tr>';
-        }).join('') + '</tbody></table></div>' : empty('Nenhuma disputa','Quando um cliente ou profissional abrir uma disputa, ela aparece aqui.');
-    } else {
-      h = '<h2>Saques</h2><p class="sub">Faça o Pix para a chave informada e depois marque o saque como pago. Recusar devolve o valor ao saldo do profissional.</p>';
-      h += state.payouts.length ? '<div class="tw"><table><thead><tr><th>Profissional</th><th>Valor</th><th>Chave Pix</th><th>Pedido em</th><th>Status</th><th>Ação</th></tr></thead><tbody>' +
-        state.payouts.map(function(p){
-          var nm = p.pro_profiles&&p.pro_profiles.profiles&&p.pro_profiles.profiles.name || '';
-          return '<tr><td><b>'+esc(nm)+'</b></td><td class="num"><b>'+esc(money(p.amount_cents))+'</b></td><td>'+esc(p.pix_key)+'</td><td class="num">'+esc(when(p.requested_at))+'</td><td>'+pill(STATUS_PAYOUT,p.status)+'</td><td>' +
-            (p.status==='requested' ? '<div class="acts"><button class="btn" data-pay="'+esc(p.id)+'" data-to="paid">Marcar como pago</button><button class="btn ghost" data-pay="'+esc(p.id)+'" data-to="failed">Recusar</button></div>' : '') +
-            '</td></tr>';
-        }).join('') + '</tbody></table></div>' : empty('Nenhum saque pedido','Os pedidos de saque dos profissionais aparecem aqui.');
-    }
-    v.innerHTML = h;
-
-    function run(p,okMsg){
-      p.then(function(){ toast(okMsg); return api.load(); }).then(renderApp).catch(function(e){ toast(e.message||'Não foi possível concluir.', true); });
-    }
-    Array.prototype.forEach.call(v.querySelectorAll('[data-pro]'), function(b){
-      b.addEventListener('click', function(){ var to=b.getAttribute('data-to'); b.disabled=true;
-        run(api.setPro(b.getAttribute('data-pro'), to), to==='approved'?'Profissional aprovado':to==='suspended'?'Cadastro atualizado':'Feito'); });
-    });
-    Array.prototype.forEach.call(v.querySelectorAll('[data-disp]'), function(b){
-      b.addEventListener('click', function(){
-        var id=b.getAttribute('data-disp'), note=document.getElementById('n-'+id).value.trim();
-        if(!note){ toast('Explique a decisão antes de continuar.', true); document.getElementById('n-'+id).focus(); return; }
-        b.disabled=true; run(api.resolve(id, document.getElementById('o-'+id).value, note), 'Disputa decidida');
-      });
-    });
-    Array.prototype.forEach.call(v.querySelectorAll('[data-pay]'), function(b){
-      b.addEventListener('click', function(){ var to=b.getAttribute('data-to'); b.disabled=true;
-        run(api.payout(b.getAttribute('data-pay'), to), to==='paid'?'Saque marcado como pago':'Saque recusado'); });
-    });
-  }
-
-  /* ---------------------------------------------------------- início */
-  if(LIVE){ api.init().then(function(){ renderLogin(); }).catch(function(e){ renderLogin(e.message); }); }
-  else { renderLogin(); }
+  $('lead').addEventListener('submit',function(e){
+    e.preventDefault();
+    var nome=$('nome').value.trim(),zap=$('zap').value.trim(),bairro=$('bairro').value.trim();
+    var digits=zap.replace(/\D/g,'');
+    if(!nome){show('err','Informe seu nome.');$('nome').focus();return}
+    if(digits.length<10||digits.length>13){show('err','Confira o WhatsApp. Use o DDD, por exemplo (27) 9 0000-0000.');$('zap').focus();return}
+    if(!bairro){show('err','Informe o seu bairro.');$('bairro').focus();return}
+    if(!$('lgpd').checked){show('err','Marque a autorização para continuar.');$('lgpd').focus();return}
+    var cats=Array.prototype.map.call(document.querySelectorAll('input[name="cat-'+(kind==='pro'?'pro':'cli')+'"]:checked'),function(i){return i.value});
+    if(kind==='pro'&&!cats.length){show('err','Escolha pelo menos uma categoria em que você trabalha.');return}
+    var rec={tipo:kind,nome:nome,whatsapp:zap,bairro:bairro,cidade:$('cidade').value,categorias:cats,obs:$('obs').value.trim().slice(0,500),lgpd:true,website:$('website').value};
+    if(window.RJ&&RJ.enabled()){if(!RJ.token()){show('err','Aguarde a verificação anti-robô terminar e tente de novo.');return}rec.turnstile=RJ.token()}
+    if(kind==='pro')rec.experiencia=$('exp').value;
+    var btn=$('send');btn.disabled=true;show('info','Enviando seu cadastro...');
+    fetch('/api/lead',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(rec)})
+      .then(function(r){return r.json().catch(function(){return {}}).then(function(d){return {ok:r.ok,d:d}})})
+      .then(function(res){
+        btn.disabled=false;if(window.RJ)RJ.reset();
+        if(!res.ok){show('err',res.d.error||'Não foi possível enviar agora. Tente de novo em instantes.');return}
+        $('lead').reset();setKind(kind);
+        show('ok',kind==='pro'?'Cadastro recebido. Vamos chamar você no WhatsApp para a verificação.':'Você está na lista. Avisamos no WhatsApp quando abrir na sua região.');
+      })
+      .catch(function(){btn.disabled=false;show('err','Sem conexão. Confira a internet e tente de novo.')});
+  });
 })();
 </script>
+
+<script src="/config.js"></script>
+<script src="/site.js"></script>
 </body>
 </html>

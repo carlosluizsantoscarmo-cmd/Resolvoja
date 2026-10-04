@@ -158,20 +158,36 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       init:function(){
         return new Promise(function(res,rej){
           var s=document.createElement('script');
-          s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
-          s.onload=function(){ sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey); res(); };
+          s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+          s.onload=function(){ sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {auth:{experimental:{passkey:true}}}); res(); };
           s.onerror=function(){ rej(new Error('Não foi possível carregar a biblioteca do Supabase.')); };
           document.head.appendChild(s);
+        });
+      },
+      checkAdmin:function(userId){
+        return sb.from('profiles').select('name,role').eq('id', userId).single().then(function(p){
+          if(p.error || !p.data || p.data.role!=='admin'){ return sb.auth.signOut().then(function(){ throw new Error('Esta conta não faz parte da equipe.'); }); }
+          return {name:p.data.name};
         });
       },
       login:function(email,pass){
         return sb.auth.signInWithPassword({email:email,password:pass}).then(function(r){
           if(r.error) throw new Error('E-mail ou senha incorretos.');
-          return sb.from('profiles').select('name,role').eq('id', r.data.user.id).single().then(function(p){
-            if(p.error || !p.data || p.data.role!=='admin'){ return sb.auth.signOut().then(function(){ throw new Error('Esta conta não faz parte da equipe.'); }); }
-            return {name:p.data.name};
-          });
+          return api.checkAdmin(r.data.user.id);
         });
+      },
+      loginPasskey:function(){
+        if(!sb.auth.signInWithPasskey) return Promise.reject(new Error('Este navegador ou esta versão ainda não suporta Face ID. Entre com e-mail e senha.'));
+        return sb.auth.signInWithPasskey().then(function(r){
+          if(r.error) throw new Error('Não foi possível entrar com Face ID. Entre com e-mail e senha.');
+          var uid = (r.data && ((r.data.user && r.data.user.id) || (r.data.session && r.data.session.user && r.data.session.user.id)));
+          if(uid) return api.checkAdmin(uid);
+          return sb.auth.getUser().then(function(u){ if(!u.data || !u.data.user) throw new Error('Não foi possível entrar com Face ID.'); return api.checkAdmin(u.data.user.id); });
+        });
+      },
+      registerPasskey:function(){
+        if(!sb.auth.registerPasskey) return Promise.reject(new Error('Este navegador ou esta versão ainda não suporta Face ID.'));
+        return sb.auth.registerPasskey().then(function(r){ if(r.error) throw new Error('Não foi possível ativar o Face ID: '+(r.error.message||'tente de novo.')); return true; });
       },
       logout:function(){ return sb.auth.signOut(); },
       load:function(){
@@ -201,8 +217,14 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       (LIVE ? '<label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required>' +
               '<label for="pass">Senha</label><input id="pass" type="password" autocomplete="current-password" required>' : '') +
       '<button class="btn" type="submit">' + (LIVE ? 'Entrar' : 'Ver demonstração') + '</button>' +
+      (LIVE ? '<button class="btn ghost" type="button" id="pk" style="width:100%;margin-top:10px">Entrar com Face ID</button>' : '') +
       (LIVE ? '<p style="text-align:center;margin:14px 0 0"><a href="#" id="forgot" style="color:var(--blue,#1F3BD1);font-weight:700">Esqueci minha senha</a></p>' : '') +
       '<div class="msg" id="loginMsg" role="alert">' + esc(msg||'') + '</div></form>';
+    var pk = document.getElementById('pk');
+    if(pk) pk.addEventListener('click', function(){
+      var m = document.getElementById('loginMsg'); m.textContent='';
+      api.loginPasskey().then(function(u){ state.user=u; return api.load(); }).then(renderApp).catch(function(err){ m.textContent = err.message; });
+    });
     var fg = document.getElementById('forgot');
     if(fg) fg.addEventListener('click', function(e){
       e.preventDefault();
@@ -239,7 +261,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
     $app.innerHTML =
       (LIVE ? '' : '<div class="demo">Modo demonstração: os dados são de exemplo e nada é salvo.</div>') +
       '<header class="top"><div class="wrap"><div class="bar"><div class="logo">Resolvo<b>Já</b></div><span class="tag">Painel da equipe</span><span class="sp"></span>' +
-      '<span style="color:var(--muted);font-size:14px">'+esc(state.user.name)+'</span><button class="btn ghost" id="out">Sair</button></div>' +
+      '<span style="color:var(--muted);font-size:14px">'+esc(state.user.name)+'</span><button class="btn ghost" id="pkreg">Ativar Face ID</button><button class="btn ghost" id="out">Sair</button></div>' +
       '<nav class="tabs" role="tablist">' + tabs.map(function(t){
         return '<button class="tab" role="tab" aria-selected="'+(state.tab===t[0])+'" data-tab="'+t[0]+'">'+t[1]+(t[2]===null?'':' <span class="count'+(t[2]?'':' zero')+'">'+t[2]+'</span>')+'</button>';
       }).join('') + '</nav></div></header>' +
@@ -247,6 +269,8 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
         kpi('Cadastros para verificar', c.cadastros) + kpi('Negociações a pagar', c.negs) + kpi('Pedidos em disputa', c.pedidos) +
         kpi('Disputas abertas', c.disputas) + kpi('Saques a pagar', money(open)) +
       '</div><section id="view"></section></main>';
+    var pkr = document.getElementById('pkreg');
+    if(pkr){ if(!LIVE) pkr.style.display='none'; else pkr.addEventListener('click', function(){ api.registerPasskey().then(function(){ alert('Face ID ativado neste aparelho. Na próxima vez, use "Entrar com Face ID".'); }).catch(function(err){ alert(err.message); }); }); }
     document.getElementById('out').addEventListener('click', function(){ api.logout().then(function(){ state.user=null; renderLogin(); }); });
     Array.prototype.forEach.call(document.querySelectorAll('[data-tab]'), function(b){ b.addEventListener('click', function(){ state.tab=b.getAttribute('data-tab'); renderApp(); }); });
     renderView();

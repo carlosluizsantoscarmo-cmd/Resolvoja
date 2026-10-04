@@ -2,5 +2,5 @@
 // NUNCA coloque aqui a chave "service_role".
 window.RJ_APP = {
   url: "https://mmjtcyuvhltnkyxpwddd.supabase.co",
-  anonKey: ""
+  anonKey: "sb_publishable_4TCdQHUt8RClesgMldSo-w_um_UW6xa"
 };

@@ -89,11 +89,15 @@
       (signup
         ? '<p class="muted small" style="margin:6px 0 0">Mínimo de 8 caracteres.</p>' +
           '<label>Como você vai usar o app?</label><div class="chips"><label><input type="radio" name="role" value="client" checked> Quero contratar</label><label><input type="radio" name="role" value="pro"> Sou profissional</label></div>' +
+          '<p id="prohint" class="banner" hidden>Profissional: depois de criar a conta e entrar, você escolhe os <b>serviços</b>, os <b>bairros</b> e informa a <b>experiência</b> na próxima tela.</p>' +
           '<label style="font-weight:500;display:flex;gap:8px;align-items:flex-start;margin-top:16px"><input id="ok" type="checkbox" style="width:auto;margin-top:4px"><span>Li e aceito os <a href="/termos.html" target="_blank" rel="noopener">Termos</a> e a <a href="/privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>.</span></label>'
         : "") +
       '<div id="err"></div><button class="full" id="go" type="submit">' + (signup ? "Criar conta" : "Entrar") + "</button></form>" + installBlock()
     );
     bindInstall();
+    Array.prototype.forEach.call(document.querySelectorAll('input[name="role"]'), function (r) {
+      r.onchange = function () { var h = $("prohint"); if (h) h.hidden = document.querySelector('input[name="role"]:checked').value !== "pro"; };
+    });
     $("t1").onclick = function () { screenAuth("login"); };
     $("t2").onclick = function () { screenAuth("signup"); };
     $("f").onsubmit = async function (ev) {
@@ -118,7 +122,7 @@
           var s = await sb.auth.signUp({ email: email, password: senha, options: { data: { name: nome } } });
           if (s.error) throw s.error;
           if (!s.data.session) {
-            plain('<div class="card"><h1>Confirme seu e-mail</h1><p>Enviamos uma mensagem para <b>' + e(email) + '</b>. Abra o link para ativar a conta e depois volte aqui para entrar.</p><button class="full" id="vol" type="button">Ir para Entrar</button></div>');
+            plain('<div class="card"><h1>Confirme seu e-mail</h1><p>Enviamos uma mensagem para <b>' + e(email) + '</b>. Abra o link para ativar a conta e depois volte aqui para entrar.' + (role === "pro" ? " Ao entrar, você completa serviços, bairros e experiência." : "") + '</p><button class="full" id="vol" type="button">Ir para Entrar</button></div>');
             $("vol").onclick = function () { screenAuth("login"); };
           }
         }

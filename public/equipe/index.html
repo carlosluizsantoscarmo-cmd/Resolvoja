@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Painel Resolvo Já</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="/app/app-config.js"></script>
+<script>
+/* Para usar com dados reais, preencha as duas linhas abaixo (Supabase > Project Settings > API).
+   A chave "anon" pode ficar aqui: quem manda é a segurança por linha do banco. NUNCA coloque a chave service_role. */
+/* A URL e a chave pública vêm do mesmo arquivo do app (/app/app-config.js): preencha só lá. */
+window.RESOLVO_JA_CONFIG = { supabaseUrl: (window.RJ_APP||{}).url || "", supabaseAnonKey: (window.RJ_APP||{}).anonKey || "" };
+</script>
+<style>
+:root{
+  --bg:#F3F5FC;--surface:#FFFFFF;--text:#121A3A;--muted:#566080;--line:#D9DDEE;--soft:#E3E8FB;
+  --brand:#1F3BD1;--brand-ink:#FFFFFF;--sun:#FFC400;--sun-ink:#121A3A;
+  --ok:#0E7A52;--ok-bg:#DDF3EA;--warn:#8A4B06;--warn-bg:#FDEBCF;--err:#A12626;--err-bg:#FBE3E3;
+  --f-display:'Bricolage Grotesque','Trebuchet MS',system-ui,sans-serif;
+  --f-body:'Figtree',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1230;--surface:#151B3E;--text:#EEF0FA;--muted:#A3ABCF;--line:#283062;--soft:#1F2757;
+    --brand:#8FA2FF;--brand-ink:#0D1230;--ok:#6FD6A8;--ok-bg:#12382B;--warn:#F6C47A;--warn-bg:#3F2B0E;--err:#FF9B9B;--err-bg:#431B1B;color-scheme:dark}
+}
+:root[data-theme="dark"]{
+  --bg:#0D1230;--surface:#151B3E;--text:#EEF0FA;--muted:#A3ABCF;--line:#283062;--soft:#1F2757;
+  --brand:#8FA2FF;--brand-ink:#0D1230;--ok:#6FD6A8;--ok-bg:#12382B;--warn:#F6C47A;--warn-bg:#3F2B0E;--err:#FF9B9B;--err-bg:#431B1B;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--f-display);letter-spacing:-.02em;margin:0}
+:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.wrap{max-width:1180px;margin-inline:auto;padding-inline:20px}
+header.top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.bar{display:flex;align-items:center;gap:14px;padding-block:12px;flex-wrap:wrap}
+.logo{font:800 22px var(--f-display);letter-spacing:-.02em;display:flex;gap:5px}
+.logo b{background:var(--sun);color:var(--sun-ink);padding:0 8px 2px;border-radius:10px 10px 10px 3px}
+.tag{font-weight:700;font-size:13px;background:var(--soft);color:var(--brand);padding:3px 10px;border-radius:999px}
+.sp{flex:1}
+.demo{background:var(--warn-bg);color:var(--warn);font-weight:600;font-size:14px;padding:8px 0;text-align:center}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;padding-bottom:10px}
+.tab{flex:none;border:0;background:none;color:var(--muted);font:700 15px var(--f-body);padding:9px 14px;border-radius:10px;cursor:pointer;display:flex;gap:8px;align-items:center}
+.tab[aria-selected="true"]{background:var(--soft);color:var(--brand)}
+.count{font-size:12.5px;background:var(--err);color:var(--surface);border-radius:999px;padding:0 7px;min-width:20px;text-align:center}
+.count.zero{background:var(--line);color:var(--muted)}
+main{padding-block:24px 60px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:26px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;min-width:0}
+.kpi span{display:block;color:var(--muted);font-size:14px;font-weight:600}
+.kpi b{display:block;font:800 28px var(--f-display);letter-spacing:-.02em;margin-top:2px}
+h2{font-size:24px;margin-bottom:4px}
+.sub{color:var(--muted);margin:0 0 16px}
+.tw{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:15px}
+th{text-align:left;padding:11px 14px;background:var(--bg);color:var(--muted);font-size:13.5px;font-weight:700;white-space:nowrap}
+td{padding:12px 14px;border-top:1px solid var(--line);vertical-align:top}
+td small{display:block;color:var(--muted)}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill{display:inline-block;font-weight:700;font-size:12.5px;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.pill.ok{background:var(--ok-bg);color:var(--ok)} .pill.warn{background:var(--warn-bg);color:var(--warn)}
+.pill.err{background:var(--err-bg);color:var(--err)} .pill.info{background:var(--soft);color:var(--brand)}
+.btn{border:0;border-radius:10px;padding:9px 14px;font:700 14.5px var(--f-body);cursor:pointer;background:var(--brand);color:var(--brand-ink)}
+.btn.ghost{background:transparent;color:var(--text);border:1.5px solid var(--line)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.acts{display:flex;gap:6px;flex-wrap:wrap}
+select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;max-width:100%}
+.empty{padding:34px 20px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--text);font-size:17px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--text);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:600;z-index:20;max-width:90vw}
+.toast.err{background:var(--err);color:#fff}
+.login{max-width:380px;margin:12vh auto;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:26px}
+.login label{display:block;font-weight:700;font-size:14.5px;margin:14px 0 6px}
+.login input{width:100%}
+.login .btn{width:100%;margin-top:18px;padding:12px}
+.msg{margin-top:12px;color:var(--err);font-weight:600;min-height:1.4em}
+.resolve{display:grid;gap:6px;min-width:230px}
+@media (max-width:640px){.wrap{padding-inline:16px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function(){
+  var CFG = window.RESOLVO_JA_CONFIG || {};
+  var LIVE = !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
+  var $app = document.getElementById('app');
+  var state = { tab:'cadastros', pros:[], reqs:[], disputes:[], payouts:[], audit:[], user:null };
+
+  /* ---------------------------------------------------------- utilidades */
+  function esc(s){ var d=document.createElement('div'); d.textContent = s==null ? '' : String(s); return d.innerHTML; }
+  function money(c){ return (c/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+  function when(iso){ var d=new Date(iso); return isNaN(d) ? '' : d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }
+  var STATUS_REQ = { open:['Aberto','info'], awaiting_payment:['Aguardando pagamento','warn'], hired:['Contratado','info'], completed:['Concluído','ok'], cancelled:['Cancelado','err'], disputed:['Em disputa','err'] };
+  var STATUS_PAYOUT = { requested:['Pedido','warn'], paid:['Pago','ok'], failed:['Recusado','err'] };
+  var STATUS_DISPUTE = { open:['Aberta','err'], resolved_refund:['Reembolsada','info'], resolved_partial:['Parcial','info'], resolved_release:['Liberada','ok'] };
+  var STATUS_PRO = { pending:['Pendente','warn'], approved:['Aprovado','ok'], suspended:['Suspenso','err'] };
+  function pill(map,k){ var m=map[k]||[k,'info']; return '<span class="pill '+m[1]+'">'+esc(m[0])+'</span>'; }
+  function toast(msg,isErr){
+    Array.prototype.forEach.call(document.querySelectorAll('.toast'), function(x){ x.remove(); });
+    var t=document.createElement('div'); t.className='toast'+(isErr?' err':''); t.setAttribute('role','status'); t.textContent=msg;
+    document.body.appendChild(t); setTimeout(function(){ t.remove(); }, 3200);
+  }
+
+  /* ---------------------------------------------------------- dados de demonstração */
+  var demo = {
+    pros:[
+      {user_id:'p1',name:'Rodrigo Pires',phone:'(27) 9 9911-2233',status:'pending',years_exp:6,categories:'Eletricista',accepted_terms:true,document_path:'documentos/p1/rg.jpg',created_at:'2026-10-02T09:10:00Z'},
+      {user_id:'p2',name:'Luciana Torres',phone:'(27) 9 9822-4411',status:'pending',years_exp:3,categories:'Montador',accepted_terms:true,document_path:'documentos/p2/rg.jpg',created_at:'2026-10-02T06:40:00Z'},
+      {user_id:'p3',name:'Edmilson Barros',phone:'(27) 9 9733-0099',status:'pending',years_exp:12,categories:'Encanador',accepted_terms:false,document_path:'documentos/p3/rg.jpg',created_at:'2026-10-01T18:05:00Z'},
+      {user_id:'p4',name:'Marcos Vinícius',phone:'(27) 9 9644-8800',status:'approved',years_exp:8,categories:'Montador',accepted_terms:true,document_path:'documentos/p4/rg.jpg',created_at:'2026-09-20T11:00:00Z'}
+    ],
+    reqs:[
+      {id:'r1',title:'Montar guarda-roupa de 6 portas',status:'hired',created_at:'2026-10-02T10:02:00Z',categories:{name:'Montador'}},
+      {id:'r2',title:'Trocar chuveiro elétrico',status:'open',created_at:'2026-10-02T09:30:00Z',categories:{name:'Eletricista'}},
+      {id:'r3',title:'Vazamento na pia da cozinha',status:'disputed',created_at:'2026-09-30T15:12:00Z',categories:{name:'Encanador'}},
+      {id:'r4',title:'Instalar prateleiras e nichos',status:'completed',created_at:'2026-09-28T08:45:00Z',categories:{name:'Montador'}}
+    ],
+    disputes:[
+      {id:'d1',reason:'O vazamento voltou no dia seguinte ao serviço.',status:'open',created_at:'2026-10-01T20:00:00Z',service_requests:{title:'Vazamento na pia da cozinha'}}
+    ],
+    payouts:[
+      {id:'s1',amount_cents:16200,pix_key:'marcos@exemplo.com',status:'requested',requested_at:'2026-10-02T08:20:00Z',pro_profiles:{profiles:{name:'Marcos Vinícius'}}},
+      {id:'s2',amount_cents:9000,pix_key:'(27) 9 9644-8800',status:'paid',requested_at:'2026-09-29T10:00:00Z',pro_profiles:{profiles:{name:'Marcos Vinícius'}}}
+    ]
+  };
+
+  /* ---------------------------------------------------------- acesso aos dados */
+  var api;
+  if(!LIVE){
+    api = {
+      login:function(){ return Promise.resolve({name:'Equipe Resolvo Já (demonstração)'}); },
+      logout:function(){ return Promise.resolve(); },
+      load:function(){ state.pros=demo.pros; state.reqs=demo.reqs; state.disputes=demo.disputes; state.payouts=demo.payouts; return Promise.resolve(); },
+      setPro:function(id,status){ demo.pros.forEach(function(p){ if(p.user_id===id) p.status=status; }); return Promise.resolve(); },
+      resolve:function(id,outcome){
+        demo.disputes.forEach(function(d){ if(d.id===id) d.status=outcome; });
+        demo.reqs.forEach(function(r){ if(r.status==='disputed') r.status = outcome==='resolved_refund' ? 'cancelled' : 'completed'; });
+        return Promise.resolve();
+      },
+      payout:function(id,status){ demo.payouts.forEach(function(p){ if(p.id===id) p.status=status; }); return Promise.resolve(); }
+    };
+  } else {
+    var sb = null;
+    var need = function(r){ if(r.error) throw new Error(r.error.message); return r.data; };
+    api = {
+      init:function(){
+        return new Promise(function(res,rej){
+          var s=document.createElement('script');
+          s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
+          s.onload=function(){ sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey); res(); };
+          s.onerror=function(){ rej(new Error('Não foi possível carregar a biblioteca do Supabase.')); };
+          document.head.appendChild(s);
+        });
+      },
+      login:function(email,pass){
+        return sb.auth.signInWithPassword({email:email,password:pass}).then(function(r){
+          if(r.error) throw new Error('E-mail ou senha incorretos.');
+          return sb.from('profiles').select('name,role').eq('id', r.data.user.id).single().then(function(p){
+            if(p.error || !p.data || p.data.role!=='admin'){ return sb.auth.signOut().then(function(){ throw new Error('Esta conta não faz parte da equipe.'); }); }
+            return {name:p.data.name};
+          });
+        });
+      },
+      logout:function(){ return sb.auth.signOut(); },
+      load:function(){
+        return Promise.all([
+          sb.from('admin_pro_queue').select('*').order('created_at',{ascending:false}),
+          sb.from('service_requests').select('id,title,status,created_at,categories(name)').order('created_at',{ascending:false}).limit(100),
+          sb.from('disputes').select('id,reason,status,created_at,service_requests(title)').order('created_at',{ascending:false}).limit(100),
+          sb.from('payouts').select('id,amount_cents,pix_key,status,requested_at,pro_profiles(profiles(name))').order('requested_at',{ascending:false}).limit(100)
+        ]).then(function(r){ state.pros=need(r[0])||[]; state.reqs=need(r[1])||[]; state.disputes=need(r[2])||[]; state.payouts=need(r[3])||[]; });
+      },
+      setPro:function(id,status){ return sb.rpc('set_pro_status',{p_pro:id,p_status:status}).then(need); },
+      resolve:function(id,outcome,note){ return sb.rpc('resolve_dispute',{p_dispute:id,p_outcome:outcome,p_note:note}).then(need); },
+      payout:function(id,status){ return sb.rpc(status==='paid'?'mark_payout_paid':'mark_payout_failed',{p_payout:id}).then(need); }
+    };
+  }
+
+  /* ---------------------------------------------------------- telas */
+  function renderLogin(msg){
+    $app.innerHTML =
+      (LIVE ? '' : '<div class="demo">Modo demonstração: os dados são de exemplo e nada é salvo.</div>') +
+      '<form class="login" id="loginForm"><div class="logo" style="font-size:28px">Resolvo<b>Já</b></div>' +
+      '<p style="color:var(--muted);margin:8px 0 0">Painel da equipe</p>' +
+      (LIVE ? '<label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required>' +
+              '<label for="pass">Senha</label><input id="pass" type="password" autocomplete="current-password" required>' : '') +
+      '<button class="btn" type="submit">' + (LIVE ? 'Entrar' : 'Ver demonstração') + '</button>' +
+      '<div class="msg" id="loginMsg" role="alert">' + esc(msg||'') + '</div></form>';
+    document.getElementById('loginForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      var email = LIVE ? document.getElementById('email').value.trim() : '';
+      var pass = LIVE ? document.getElementById('pass').value : '';
+      var m = document.getElementById('loginMsg'); m.textContent='';
+      api.login(email,pass).then(function(u){ state.user=u; return api.load(); }).then(renderApp)
+        .catch(function(err){ m.textContent = err.message; });
+    });
+  }
+
+  function counts(){
+    return {
+      cadastros: state.pros.filter(function(p){return p.status==='pending';}).length,
+      pedidos: state.reqs.filter(function(r){return r.status==='disputed';}).length,
+      disputas: state.disputes.filter(function(d){return d.status==='open';}).length,
+      saques: state.payouts.filter(function(p){return p.status==='requested';}).length
+    };
+  }
+
+  function renderApp(){
+    var c = counts();
+    var tabs = [['cadastros','Cadastros',c.cadastros],['pedidos','Pedidos',null],['disputas','Disputas',c.disputas],['saques','Saques',c.saques]];
+    var open = state.payouts.filter(function(p){return p.status==='requested';}).reduce(function(a,p){return a+p.amount_cents;},0);
+    $app.innerHTML =
+      (LIVE ? '' : '<div class="demo">Modo demonstração: os dados são de exemplo e nada é salvo.</div>') +
+      '<header class="top"><div class="wrap"><div class="bar"><div class="logo">Resolvo<b>Já</b></div><span class="tag">Painel da equipe</span><span class="sp"></span>' +
+      '<span style="color:var(--muted);font-size:14px">'+esc(state.user.name)+'</span><button class="btn ghost" id="out">Sair</button></div>' +
+      '<nav class="tabs" role="tablist">' + tabs.map(function(t){
+        return '<button class="tab" role="tab" aria-selected="'+(state.tab===t[0])+'" data-tab="'+t[0]+'">'+t[1]+(t[2]===null?'':' <span class="count'+(t[2]?'':' zero')+'">'+t[2]+'</span>')+'</button>';
+      }).join('') + '</nav></div></header>' +
+      '<main class="wrap"><div class="kpis">' +
+        kpi('Cadastros para verificar', c.cadastros) + kpi('Pedidos em disputa', c.pedidos) +
+        kpi('Disputas abertas', c.disputas) + kpi('Saques a pagar', money(open)) +
+      '</div><section id="view"></section></main>';
+    document.getElementById('out').addEventListener('click', function(){ api.logout().then(function(){ state.user=null; renderLogin(); }); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-tab]'), function(b){ b.addEventListener('click', function(){ state.tab=b.getAttribute('data-tab'); renderApp(); }); });
+    renderView();
+  }
+  function kpi(l,v){ return '<div class="kpi"><span>'+esc(l)+'</span><b>'+esc(v)+'</b></div>'; }
+  function empty(t,s){ return '<div class="empty"><b>'+esc(t)+'</b>'+esc(s)+'</div>'; }
+
+  function renderView(){
+    var v = document.getElementById('view'), h='';
+    if(state.tab==='cadastros'){
+      var list = state.pros.slice().sort(function(a,b){ return (a.status==='pending'?0:1)-(b.status==='pending'?0:1); });
+      h = '<h2>Cadastros de profissionais</h2><p class="sub">Aprove só depois de conferir o documento. Sem o aceite do termo, o banco não deixa aprovar.</p>';
+      h += list.length ? '<div class="tw"><table><thead><tr><th>Profissional</th><th>Categorias</th><th>Experiência</th><th>Termo</th><th>Documento</th><th>Enviado</th><th>Status</th><th>Ação</th></tr></thead><tbody>' +
+        list.map(function(p){
+          var pend = p.status==='pending';
+          return '<tr><td><b>'+esc(p.name)+'</b><small>'+esc(p.phone||'')+'</small></td><td>'+esc(p.categories||'')+'</td><td class="num">'+esc(p.years_exp==null?'':p.years_exp+' anos')+'</td>' +
+            '<td>'+(p.accepted_terms?'<span class="pill ok">Aceito</span>':'<span class="pill err">Não aceito</span>')+'</td><td><small>'+esc(p.document_path||'sem documento')+'</small></td><td class="num">'+esc(when(p.created_at))+'</td><td>'+pill(STATUS_PRO,p.status)+'</td>' +
+            '<td><div class="acts">' +
+              (p.status!=='approved' ? '<button class="btn" data-pro="'+esc(p.user_id)+'" data-to="approved"'+(p.accepted_terms?'':' disabled title="O profissional ainda não aceitou o termo"')+'>Aprovar</button>' : '') +
+              (p.status==='pending' ? '<button class="btn ghost" data-pro="'+esc(p.user_id)+'" data-to="suspended">Recusar</button>' : '') +
+              (p.status==='approved' ? '<button class="btn ghost" data-pro="'+esc(p.user_id)+'" data-to="suspended">Suspender</button>' : '') +
+            '</div></td></tr>';
+        }).join('') + '</tbody></table></div>' : empty('Nenhum cadastro ainda','Os profissionais aparecem aqui assim que se cadastrarem.');
+    } else if(state.tab==='pedidos'){
+      h = '<h2>Pedidos</h2><p class="sub">Os 100 mais recentes. Pedidos em disputa aparecem marcados.</p>';
+      h += state.reqs.length ? '<div class="tw"><table><thead><tr><th>Pedido</th><th>Categoria</th><th>Criado</th><th>Status</th></tr></thead><tbody>' +
+        state.reqs.map(function(r){ return '<tr><td><b>'+esc(r.title)+'</b></td><td>'+esc(r.categories&&r.categories.name||'')+'</td><td class="num">'+esc(when(r.created_at))+'</td><td>'+pill(STATUS_REQ,r.status)+'</td></tr>'; }).join('') +
+        '</tbody></table></div>' : empty('Nenhum pedido ainda','Quando os clientes pedirem serviços, eles aparecem aqui.');
+    } else if(state.tab==='disputas'){
+      h = '<h2>Disputas</h2><p class="sub">Enquanto a disputa estiver aberta, o valor fica retido e a confirmação automática não roda.</p>';
+      h += state.disputes.length ? '<div class="tw"><table><thead><tr><th>Pedido</th><th>Motivo</th><th>Aberta</th><th>Status</th><th>Decisão da equipe</th></tr></thead><tbody>' +
+        state.disputes.map(function(d){
+          var isOpen = d.status==='open';
+          return '<tr><td><b>'+esc(d.service_requests&&d.service_requests.title||'')+'</b></td><td style="max-width:300px">'+esc(d.reason)+'</td><td class="num">'+esc(when(d.created_at))+'</td><td>'+pill(STATUS_DISPUTE,d.status)+'</td><td>' +
+            (isOpen ? '<div class="resolve"><select aria-label="Decisão" id="o-'+esc(d.id)+'"><option value="resolved_refund">Reembolsar o cliente</option><option value="resolved_release">Liberar ao profissional</option><option value="resolved_partial">Parcial (estorno manual)</option></select>' +
+              '<input id="n-'+esc(d.id)+'" placeholder="Explique a decisão" aria-label="Explicação da decisão"><button class="btn" data-disp="'+esc(d.id)+'">Decidir</button></div>' : '') +
+            '</td></tr>';
+        }).join('') + '</tbody></table></div>' : empty('Nenhuma disputa','Quando um cliente ou profissional abrir uma disputa, ela aparece aqui.');
+    } else {
+      h = '<h2>Saques</h2><p class="sub">Faça o Pix para a chave informada e depois marque o saque como pago. Recusar devolve o valor ao saldo do profissional.</p>';
+      h += state.payouts.length ? '<div class="tw"><table><thead><tr><th>Profissional</th><th>Valor</th><th>Chave Pix</th><th>Pedido em</th><th>Status</th><th>Ação</th></tr></thead><tbody>' +
+        state.payouts.map(function(p){
+          var nm = p.pro_profiles&&p.pro_profiles.profiles&&p.pro_profiles.profiles.name || '';
+          return '<tr><td><b>'+esc(nm)+'</b></td><td class="num"><b>'+esc(money(p.amount_cents))+'</b></td><td>'+esc(p.pix_key)+'</td><td class="num">'+esc(when(p.requested_at))+'</td><td>'+pill(STATUS_PAYOUT,p.status)+'</td><td>' +
+            (p.status==='requested' ? '<div class="acts"><button class="btn" data-pay="'+esc(p.id)+'" data-to="paid">Marcar como pago</button><button class="btn ghost" data-pay="'+esc(p.id)+'" data-to="failed">Recusar</button></div>' : '') +
+            '</td></tr>';
+        }).join('') + '</tbody></table></div>' : empty('Nenhum saque pedido','Os pedidos de saque dos profissionais aparecem aqui.');
+    }
+    v.innerHTML = h;
+
+    function run(p,okMsg){
+      p.then(function(){ toast(okMsg); return api.load(); }).then(renderApp).catch(function(e){ toast(e.message||'Não foi possível concluir.', true); });
+    }
+    Array.prototype.forEach.call(v.querySelectorAll('[data-pro]'), function(b){
+      b.addEventListener('click', function(){ var to=b.getAttribute('data-to'); b.disabled=true;
+        run(api.setPro(b.getAttribute('data-pro'), to), to==='approved'?'Profissional aprovado':to==='suspended'?'Cadastro atualizado':'Feito'); });
+    });
+    Array.prototype.forEach.call(v.querySelectorAll('[data-disp]'), function(b){
+      b.addEventListener('click', function(){
+        var id=b.getAttribute('data-disp'), note=document.getElementById('n-'+id).value.trim();
+        if(!note){ toast('Explique a decisão antes de continuar.', true); document.getElementById('n-'+id).focus(); return; }
+        b.disabled=true; run(api.resolve(id, document.getElementById('o-'+id).value, note), 'Disputa decidida');
+      });
+    });
+    Array.prototype.forEach.call(v.querySelectorAll('[data-pay]'), function(b){
+      b.addEventListener('click', function(){ var to=b.getAttribute('data-to'); b.disabled=true;
+        run(api.payout(b.getAttribute('data-pay'), to), to==='paid'?'Saque marcado como pago':'Saque recusado'); });
+    });
+  }
+
+  /* ---------------------------------------------------------- início */
+  if(LIVE){ api.init().then(function(){ renderLogin(); }).catch(function(e){ renderLogin(e.message); }); }
+  else { renderLogin(); }
+})();
+</script>
+</body>
+</html>

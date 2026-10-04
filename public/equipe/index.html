@@ -201,7 +201,17 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       (LIVE ? '<label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required>' +
               '<label for="pass">Senha</label><input id="pass" type="password" autocomplete="current-password" required>' : '') +
       '<button class="btn" type="submit">' + (LIVE ? 'Entrar' : 'Ver demonstração') + '</button>' +
+      (LIVE ? '<p style="text-align:center;margin:14px 0 0"><a href="#" id="forgot" style="color:var(--blue,#1F3BD1);font-weight:700">Esqueci minha senha</a></p>' : '') +
       '<div class="msg" id="loginMsg" role="alert">' + esc(msg||'') + '</div></form>';
+    var fg = document.getElementById('forgot');
+    if(fg) fg.addEventListener('click', function(e){
+      e.preventDefault();
+      var m = document.getElementById('loginMsg'), em = document.getElementById('email').value.trim();
+      if(!em){ m.textContent='Digite seu e-mail acima e clique de novo em "Esqueci minha senha".'; return; }
+      sb.auth.resetPasswordForEmail(em,{redirectTo: location.origin + '/app/'}).then(function(r){
+        m.textContent = r.error ? 'Não foi possível enviar agora. Tente de novo em alguns minutos.' : 'Pronto! Se este e-mail existir, enviamos um link. Confira também o spam.';
+      });
+    });
     document.getElementById('loginForm').addEventListener('submit', function(e){
       e.preventDefault();
       var email = LIVE ? document.getElementById('email').value.trim() : '';

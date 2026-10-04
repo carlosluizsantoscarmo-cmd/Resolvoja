@@ -137,6 +137,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       login:function(){ return Promise.resolve({name:'Equipe Resolvo Já (demonstração)'}); },
       logout:function(){ return Promise.resolve(); },
       load:function(){ state.pros=demo.pros; state.reqs=demo.reqs; state.disputes=demo.disputes; state.payouts=demo.payouts; return Promise.resolve(); },
+      docUrl:function(){ return Promise.reject(new Error('No modo demonstração não há documentos.')); },
       setPro:function(id,status){ demo.pros.forEach(function(p){ if(p.user_id===id) p.status=status; }); return Promise.resolve(); },
       resolve:function(id,outcome){
         demo.disputes.forEach(function(d){ if(d.id===id) d.status=outcome; });
@@ -176,6 +177,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
           sb.from('payouts').select('id,amount_cents,pix_key,status,requested_at,pro_profiles(profiles(name))').order('requested_at',{ascending:false}).limit(100)
         ]).then(function(r){ state.pros=need(r[0])||[]; state.reqs=need(r[1])||[]; state.disputes=need(r[2])||[]; state.payouts=need(r[3])||[]; });
       },
+      docUrl:function(path){ return sb.storage.from('documentos').createSignedUrl(path,120).then(function(r){ if(r.error||!r.data) throw new Error('Não foi possível abrir o documento.'); return r.data.signedUrl; }); },
       setPro:function(id,status){ return sb.rpc('set_pro_status',{p_pro:id,p_status:status}).then(need); },
       resolve:function(id,outcome,note){ return sb.rpc('resolve_dispute',{p_dispute:id,p_outcome:outcome,p_note:note}).then(need); },
       payout:function(id,status){ return sb.rpc(status==='paid'?'mark_payout_paid':'mark_payout_failed',{p_payout:id}).then(need); }
@@ -242,7 +244,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
         list.map(function(p){
           var pend = p.status==='pending';
           return '<tr><td><b>'+esc(p.name)+'</b><small>'+esc(p.phone||'')+'</small></td><td>'+esc(p.categories||'')+'</td><td class="num">'+esc(p.years_exp==null?'':p.years_exp+' anos')+'</td>' +
-            '<td>'+(p.accepted_terms?'<span class="pill ok">Aceito</span>':'<span class="pill err">Não aceito</span>')+'</td><td><small>'+esc(p.document_path||'sem documento')+'</small></td><td class="num">'+esc(when(p.created_at))+'</td><td>'+pill(STATUS_PRO,p.status)+'</td>' +
+            '<td>'+(p.accepted_terms?'<span class="pill ok">Aceito</span>':'<span class="pill err">Não aceito</span>')+'</td><td>'+(p.document_path?'<button class="btn ghost" data-doc="'+esc(p.document_path)+'">Ver documento</button>':'<small>sem documento</small>')+'</td><td class="num">'+esc(when(p.created_at))+'</td><td>'+pill(STATUS_PRO,p.status)+'</td>' +
             '<td><div class="acts">' +
               (p.status!=='approved' ? '<button class="btn" data-pro="'+esc(p.user_id)+'" data-to="approved"'+(p.accepted_terms?'':' disabled title="O profissional ainda não aceitou o termo"')+'>Aprovar</button>' : '') +
               (p.status==='pending' ? '<button class="btn ghost" data-pro="'+esc(p.user_id)+'" data-to="suspended">Recusar</button>' : '') +
@@ -279,6 +281,12 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
     function run(p,okMsg){
       p.then(function(){ toast(okMsg); return api.load(); }).then(renderApp).catch(function(e){ toast(e.message||'Não foi possível concluir.', true); });
     }
+    Array.prototype.forEach.call(v.querySelectorAll('[data-doc]'), function(b){
+      b.addEventListener('click', function(){
+        var w = window.open('', '_blank');
+        api.docUrl(b.getAttribute('data-doc')).then(function(u){ if(w){ w.location = u; } }).catch(function(e){ if(w) w.close(); toast(e.message||'Não foi possível abrir o documento.', true); });
+      });
+    });
     Array.prototype.forEach.call(v.querySelectorAll('[data-pro]'), function(b){
       b.addEventListener('click', function(){ var to=b.getAttribute('data-to'); b.disabled=true;
         run(api.setPro(b.getAttribute('data-pro'), to), to==='approved'?'Profissional aprovado':to==='suspended'?'Cadastro atualizado':'Feito'); });

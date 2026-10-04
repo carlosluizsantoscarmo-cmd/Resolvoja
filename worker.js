@@ -423,6 +423,46 @@ async function pedidosGet({ request, env }) {
   return json(200, { total: items.length, items });
 }
 
+
+// ---- Aviso de negociação (vem do Supabase quando o cliente aceita uma proposta) ----
+// POST /api/negociacao  cabeçalho x-rj-secret = Secret NOTIFY_SECRET. Manda um e-mail para a equipe (NOTIFY_EMAIL).
+function waLink(phone, msg) {
+  let d = String(phone || "").replace(/\D/g, "");
+  if (d.length < 10) return "(sem telefone)";
+  if (!d.startsWith("55")) d = "55" + d;
+  return "https://wa.me/" + d + "?text=" + encodeURIComponent(msg);
+}
+function sameSecret(a, b) {
+  a = String(a || ""); b = String(b || "");
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < Math.max(a.length, b.length); i++) diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  return diff === 0;
+}
+async function negociacaoPost({ request, env, ctx }) {
+  if (!env.NOTIFY_SECRET || env.NOTIFY_SECRET.length < 16) return json(503, { error: "Aviso não configurado." });
+  if (!sameSecret(request.headers.get("x-rj-secret"), env.NOTIFY_SECRET)) return json(401, { error: "Não autorizado." });
+  let b;
+  try { const raw = await request.text(); if (raw.length > 6000) return json(413, { error: "Grande demais." }); b = JSON.parse(raw); }
+  catch { return json(400, { error: "Pedido inválido." }); }
+  const t = (x, n) => String(x == null ? "" : x).replace(/[\r\n]+/g, " ").slice(0, n);
+  const cents = Number(b.amount_cents);
+  if (!Number.isInteger(cents) || cents <= 0) return json(400, { error: "Valor inválido." });
+  const titulo = t(b.title, 120), valor = brl(cents), comissao = brl(Math.round(cents / 10));
+  const msgCli = `Olá, ${t(b.client_name, 60)}! Aqui é do Resolvo Já. Você escolheu a proposta de ${t(b.pro_name, 60)} para "${titulo}" (${valor}). Vamos combinar o pagamento?`;
+  const msgPro = `Olá, ${t(b.pro_name, 60)}! Aqui é do Resolvo Já. O cliente aceitou sua proposta para "${titulo}" (${valor}). Estamos combinando o pagamento e já te avisamos para seguir.`;
+  const text = [
+    `Um cliente aceitou uma proposta e o pedido está aguardando pagamento.`, ``,
+    `Serviço: ${titulo} (${t(b.category, 40)}) - ${t(b.bairro, 60)}, ${t(b.city, 60)}`,
+    `Valor: ${valor} (sua comissão de 10%: ${comissao})`,
+    b.eta ? `Prazo combinado: ${t(b.eta, 80)}` : "", ``,
+    `CLIENTE: ${t(b.client_name, 60)} - ${t(b.client_phone, 30)}`, `Chamar no WhatsApp: ${waLink(b.client_phone, msgCli)}`, ``,
+    `PROFISSIONAL: ${t(b.pro_name, 60)} - ${t(b.pro_phone, 30)}`, `Chamar no WhatsApp: ${waLink(b.pro_phone, msgPro)}`, ``,
+    `Quando receber o pagamento, abra https://resolvoja.app.br/equipe/ > Negociações e clique em "Marcar como pago".`,
+  ].filter((l, i, a) => l !== "" || a[i - 1] !== "").join("\n");
+  notifyOwner(env, ctx, `Nova negociação: ${titulo} - ${valor}`, text);
+  return json(200, { ok: true });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const { pathname } = new URL(request.url);
@@ -434,6 +474,7 @@ export default {
       if (request.method === "DELETE") return leadsDelete({ request, env });
       return leadsOther({ request, env });
     }
+    if (pathname === "/api/negociacao") return request.method === "POST" ? negociacaoPost({ request, env, ctx }) : json(405, { error: "Método não permitido." }, { Allow: "POST" });
     if (pathname === "/api/checkout") return request.method === "POST" ? checkoutPost({ request, env }) : json(405, { error: "Método não permitido." }, { Allow: "POST" });
     if (pathname === "/api/mp-webhook") return request.method === "POST" ? mpWebhook({ request, env, ctx }) : json(405, { error: "Método não permitido." }, { Allow: "POST" });
     if (pathname === "/api/pedido") return request.method === "GET" ? pedidoGet({ request, env, ctx }) : json(405, { error: "Método não permitido." }, { Allow: "GET" });

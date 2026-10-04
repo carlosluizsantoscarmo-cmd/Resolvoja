@@ -5,5 +5,5 @@ window.RJ = {
   // Mensagem que já vem escrita quando a pessoa abre o WhatsApp.
   whatsappMsg: "Olá! Vim pelo site do Resolvo Já e preciso de ajuda.",
   // Chave do site (Site Key) do Cloudflare Turnstile. Vazia = a verificação anti-robô fica desligada.
-  turnstile: ""
+  turnstile: "0x4AAAAAAFNMXdAjykLpJeDJ"
 };

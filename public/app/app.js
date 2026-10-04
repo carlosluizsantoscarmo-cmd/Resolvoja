@@ -6,7 +6,7 @@
   var app = document.getElementById("app");
   var TERMS_VERSION = "2026-10-v1";
   var sb = null, user = null, profile = null, pro = null, proReady = false;
-  var cats = [], regions = [], timer = null, installEvt = null;
+  var cats = [], regions = [], timer = null, installEvt = null, recovering = false;
 
   // ---------- utilidades ----------
   function e(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
@@ -128,13 +128,14 @@
           '<p id="prohint" class="banner" hidden>Profissional: depois de criar a conta e entrar, você escolhe os <b>serviços</b>, os <b>bairros</b> e informa a <b>experiência</b> na próxima tela.</p>' +
       '<label style="font-weight:500;display:flex;gap:8px;align-items:flex-start;margin-top:16px"><input id="ok" type="checkbox" style="width:auto;margin-top:4px"><span>Li e aceito os <a href="/termos.html" target="_blank" rel="noopener">Termos</a> e a <a href="/privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>.</span></label>'
         : "") +
-      '<div id="err"></div><button class="full" id="go" type="submit">' + (signup ? "Criar conta" : "Entrar") + "</button></form>" + installBlock(),
+      '<div id="err"></div><button class="full" id="go" type="submit">' + (signup ? "Criar conta" : "Entrar") + "</button></form>" + (signup ? "" : '<p class="center" style="margin:14px 0 0"><button type="button" class="ghost slim" id="forgot">Esqueci minha senha</button></p>') + installBlock(),
       signup ? "Criar conta" : "Entrar", "Peça serviços e receba propostas de profissionais perto de você."
     );
     bindInstall();
     Array.prototype.forEach.call(document.querySelectorAll('input[name="role"]'), function (r) {
       r.onchange = function () { var h = $("prohint"); if (h) h.hidden = document.querySelector('input[name="role"]:checked').value !== "pro"; };
     });
+    if ($("forgot")) $("forgot").onclick = screenForgot;
     $("t1").onclick = function () { screenAuth("login"); };
     $("t2").onclick = function () { screenAuth("signup"); };
     $("f").onsubmit = async function (ev) {
@@ -164,6 +165,45 @@
           }
         }
       } catch (x) { btn.disabled = false; bad(friendly(x)); }
+    };
+  }
+
+  // ---------- recuperar senha ----------
+  function screenForgot() {
+    stopTimer();
+    plain('<form class="card" id="f" novalidate><label for="email" style="margin-top:0">E-mail da sua conta</label><input id="email" type="email" autocomplete="email" maxlength="120">' +
+      '<div id="err"></div><button class="full" id="go" type="submit">Enviar link para criar nova senha</button></form><p class="center" style="margin-top:14px"><button type="button" class="ghost slim" id="back">Voltar</button></p>',
+      "Recuperar senha", "Enviaremos um link para o seu e-mail.");
+    $("back").onclick = function () { screenAuth("login"); };
+    $("f").onsubmit = async function (ev) {
+      ev.preventDefault();
+      var email = $("email").value.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { $("err").innerHTML = '<div class="banner err" role="alert">Confira o e-mail.</div>'; return; }
+      $("go").disabled = true;
+      try {
+        var r = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + "/app/" });
+        if (r.error) throw r.error;
+        plain('<div class="card"><p>Se existir uma conta com <b>' + e(email) + '</b>, enviamos um link para criar uma nova senha. Abra o e-mail (veja também o spam) e clique uma vez no link.</p><button class="full" id="vol" type="button">Voltar para Entrar</button></div>', "Confira seu e-mail");
+        $("vol").onclick = function () { screenAuth("login"); };
+      } catch (x) { $("go").disabled = false; $("err").innerHTML = '<div class="banner err" role="alert">' + e(friendly(x)) + "</div>"; }
+    };
+  }
+  function screenNewPassword() {
+    stopTimer();
+    plain('<form class="card" id="f" novalidate><label for="np" style="margin-top:0">Nova senha</label><input id="np" type="password" autocomplete="new-password" maxlength="72"><p class="muted small" style="margin:6px 0 0">Mínimo de 8 caracteres.</p>' +
+      '<label for="np2">Repita a nova senha</label><input id="np2" type="password" autocomplete="new-password" maxlength="72"><div id="err"></div><button class="full" id="go" type="submit">Salvar nova senha</button></form>', "Criar nova senha");
+    $("f").onsubmit = async function (ev) {
+      ev.preventDefault();
+      function bad(m) { $("err").innerHTML = '<div class="banner err" role="alert">' + e(m) + "</div>"; }
+      var a = $("np").value, b = $("np2").value;
+      if (a.length < 8) return bad("A senha precisa ter pelo menos 8 caracteres.");
+      if (a !== b) return bad("As duas senhas não são iguais.");
+      $("go").disabled = true;
+      try {
+        var r = await sb.auth.updateUser({ password: a });
+        if (r.error) throw r.error;
+        recovering = false; toast("Senha alterada!"); profile = null; pro = null; route();
+      } catch (x) { $("go").disabled = false; bad(friendly(x)); }
     };
   }
 
@@ -285,6 +325,7 @@
     stopTimer();
     if (!sb) return screenConfig(CFG.anonKey ? "Não foi possível carregar o aplicativo. Confira a internet e abra de novo." : "Falta configurar a chave pública do banco de dados.");
     if (!user) return screenAuth();
+    if (recovering) return screenNewPassword();
     loading();
     try {
       await loadMe();
@@ -608,12 +649,15 @@
 
   function init() {
     // Link do e-mail vencido ou já usado: avisa em português e limpa o endereço.
+    recovering = /[#&]type=recovery/.test(location.hash);
     var linkErr = /[#&]error_code=/.test(location.hash) ? (/otp_expired/.test(location.hash) ? "expired" : "other") : "";
     if (linkErr) { try { history.replaceState(null, "", location.pathname); } catch (x) {} }
+    if (recovering) { setTimeout(function () { try { history.replaceState(null, "", location.pathname); } catch (x) {} }, 1500); }
     if (!CFG.url || !CFG.anonKey || !window.supabase) { sb = null; return route(); }
     sb = window.supabase.createClient(CFG.url, CFG.anonKey, { auth: { persistSession: true, autoRefreshToken: true } });
     var started = false;
     sb.auth.onAuthStateChange(function (ev, session) {
+      if (ev === "PASSWORD_RECOVERY") { recovering = true; user = session ? session.user : user; if (started) screenNewPassword(); return; }
       if (!started) return;
       var u = session ? session.user : null;
       if ((u && u.id) !== (user && user.id)) { user = u; profile = null; pro = null; setTimeout(route, 0); }
@@ -621,7 +665,7 @@
     sb.auth.getSession().then(function (r) {
       var u = r.data && r.data.session ? r.data.session.user : null;
       user = u; started = true;
-      route();
+      if (recovering && u) screenNewPassword(); else { recovering = false; route(); }
       if (linkErr) toast(linkErr === "expired" ? "Esse link venceu ou já foi usado. Tente entrar com seu e-mail e senha." : "Não foi possível usar esse link. Tente entrar com seu e-mail e senha.");
     });
   }

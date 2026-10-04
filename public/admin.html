@@ -16,6 +16,14 @@ button{padding:10px 16px;border:0;border-radius:10px;background:var(--brand);col
 button.ghost{background:transparent;color:var(--brand);border:1.5px solid var(--brand)}button.del{background:transparent;color:var(--err);border:1px solid var(--err);padding:4px 10px;font-size:13px}
 .tw{overflow-x:auto;margin-top:16px;border:1px solid var(--line);border-radius:12px}table{border-collapse:collapse;width:100%;min-width:760px;font-size:14px}
 th{text-align:left;padding:10px;background:var(--bg);color:var(--muted)}td{padding:10px;border-top:1px solid var(--line);vertical-align:top}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:12px}
+.kpi{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--bg)}.kpi b{display:block;font-size:22px;line-height:1.2}.kpi span{font-size:13px;color:var(--muted)}
+select{padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font:inherit}
+.bars{display:flex;align-items:flex-end;gap:6px;height:150px;margin-top:12px;padding:0 4px;border-bottom:1px solid var(--line)}
+.bars div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0}
+.bars i{display:block;width:100%;max-width:38px;background:var(--brand);border-radius:6px 6px 0 0;min-height:2px}
+.bl{display:flex;gap:6px;padding:0 4px;font-size:11px;color:var(--muted)}.bl span{flex:1;text-align:center;min-width:0}
+h3{font-size:16px;margin:20px 0 0}td.n,th.n{text-align:right;white-space:nowrap}tfoot td{font-weight:700}
 #msg{margin-top:12px;color:var(--err);font-weight:600}
 </style>
 </head>
@@ -32,6 +40,26 @@ th{text-align:left;padding:10px;background:var(--bg);color:var(--muted)}td{paddi
     <div id="msg" role="alert"></div>
     <div id="count" style="margin-top:12px;color:var(--muted)"></div>
     <div class="tw" id="tw" hidden><table><thead><tr><th>Quando</th><th>Tipo</th><th>Nome</th><th>WhatsApp</th><th>Local</th><th>Serviços</th><th>Obs.</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+  </div>
+  <div class="card" id="rep" style="margin-top:16px" hidden>
+    <h2 style="font-size:19px;margin:0 0 4px">Relatórios financeiros</h2>
+    <div style="color:var(--muted);font-size:14px">Valores brutos (antes da tarifa do Mercado Pago). Vendas contam pela data do pagamento; reembolsos, pela data do estorno.</div>
+    <div class="row" style="margin-top:12px;align-items:center">
+      <select id="per" aria-label="Período">
+        <option value="mes">Este mês</option><option value="mesant">Mês anterior</option><option value="30">Últimos 30 dias</option>
+        <option value="ano">Este ano</option><option value="tudo">Tudo</option><option value="custom">Personalizado…</option>
+      </select>
+      <input type="date" id="d1" style="flex:none;min-width:0" hidden aria-label="De"><input type="date" id="d2" style="flex:none;min-width:0" hidden aria-label="Até">
+      <button type="button" class="ghost" id="ocsv">Baixar pedidos (CSV)</button>
+    </div>
+    <div class="kpis" id="kpis"></div>
+    <h3>Vendas por mês (últimos 12 meses)</h3>
+    <div class="bars" id="bars"></div><div class="bl" id="bl"></div>
+    <h3>Resumo por mês</h3>
+    <div class="tw"><table style="min-width:620px"><thead><tr><th>Mês</th><th class="n">Vendas</th><th class="n">Bruto</th><th class="n">Reembolsos</th><th class="n">Líquido</th><th class="n">Comissão</th><th class="n">Cadastros</th></tr></thead><tbody id="mrows"></tbody></table></div>
+    <h3>Resumo por ano</h3>
+    <div class="tw"><table style="min-width:620px"><thead><tr><th>Ano</th><th class="n">Vendas</th><th class="n">Bruto</th><th class="n">Reembolsos</th><th class="n">Líquido</th><th class="n">Comissão</th><th class="n">Cadastros</th></tr></thead><tbody id="yrows"></tbody></table></div>
+    <div id="rnote" style="margin-top:12px;color:var(--muted);font-size:13px"></div>
   </div>
   <div class="card" id="orders" style="margin-top:16px" hidden>
     <h2 style="font-size:19px;margin:0 0 4px">Pedidos e pagamentos</h2>
@@ -54,7 +82,7 @@ th{text-align:left;padding:10px;background:var(--bg);color:var(--muted)}td{paddi
       if(!r.ok)throw new Error('Não foi possível carregar agora.');
       return r.json();
     }).then(function(d){
-      $('count').textContent=d.total?d.total+' cadastro'+(d.total>1?'s':''):'Nenhum cadastro ainda.';
+      LEADS=d.items;$('count').textContent=d.total?d.total+' cadastro'+(d.total>1?'s':''):'Nenhum cadastro ainda.';
       $('tw').hidden=!d.total;$('csv').hidden=!d.total;
       var body=$('rows');body.textContent='';
       d.items.forEach(function(x){
@@ -100,9 +128,86 @@ th{text-align:left;padding:10px;background:var(--bg);color:var(--muted)}td{paddi
       c.appendChild(b);tr.appendChild(c);body.appendChild(tr);
     });
   }
+
+  var TZ='America/Sao_Paulo',LEADS=[];
+  function ymd(iso){return new Date(iso).toLocaleDateString('en-CA',{timeZone:TZ})} // AAAA-MM-DD no fuso do Brasil
+  function brl(c){return 'R$ '+(c/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
+  var MESES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  function mlabel(k){return MESES[+k.slice(5,7)-1]+'/'+k.slice(2,4)}
+  function range(){
+    var v=$('per').value,hoje=ymd(new Date().toISOString()),y=hoje.slice(0,4),m=hoje.slice(0,7);
+    if(v==='mes')return [m+'-01',m+'-31'];
+    if(v==='mesant'){var d=new Date(+y,+hoje.slice(5,7)-2,1),k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');return [k+'-01',k+'-31']}
+    if(v==='30'){var t=new Date();t.setDate(t.getDate()-29);return [ymd(t.toISOString()),hoje]}
+    if(v==='ano')return [y+'-01-01',y+'-12-31'];
+    if(v==='custom')return [$('d1').value||'0000-01-01',$('d2').value||'9999-12-31'];
+    return ['0000-01-01','9999-12-31'];
+  }
+  function inR(d,r){return d>=r[0]&&d<=r[1]}
+  function comm(o){return o.commissionCents||0}
+  function agg(keyFn){
+    var g={};
+    function at(k){return g[k]||(g[k]={n:0,bruto:0,reemb:0,com:0,cad:0})}
+    ORDERS.forEach(function(o){
+      if(o.paidAt&&['paid','refunded','charged_back'].indexOf(o.status)>-1){var x=at(keyFn(o.paidAt));x.n++;x.bruto+=o.totalCents;x.com+=comm(o)}
+      if(o.status==='refunded'||o.status==='charged_back'){var when=o.refundedAt||o.paidAt;if(when){at(keyFn(when)).reemb+=o.totalCents}}
+    });
+    LEADS.forEach(function(l){at(keyFn(l.criadoEm)).cad++});
+    return g;
+  }
+  function fillTable(id,g,label){
+    var body=$(id);body.textContent='';
+    var keys=Object.keys(g).sort().reverse(),tot={n:0,bruto:0,reemb:0,com:0,cad:0};
+    keys.forEach(function(k){
+      var x=g[k],tr=document.createElement('tr');
+      tr.appendChild(td(label(k)));
+      [x.n,brl(x.bruto),brl(x.reemb),brl(x.bruto-x.reemb),brl(x.com),x.cad].forEach(function(v){var c=td(v);c.className='n';tr.appendChild(c)});
+      body.appendChild(tr);
+      tot.n+=x.n;tot.bruto+=x.bruto;tot.reemb+=x.reemb;tot.com+=x.com;tot.cad+=x.cad;
+    });
+    if(!keys.length){var tr=document.createElement('tr'),c=td('Sem dados ainda.');c.colSpan=7;tr.appendChild(c);body.appendChild(tr)}
+  }
+  function renderReport(){
+    $('rep').hidden=false;
+    $('d1').hidden=$('d2').hidden=$('per').value!=='custom';
+    var r=range(),n=0,bruto=0,reemb=0,com=0,cad=0,pend=0,pagantes={};
+    ORDERS.forEach(function(o){
+      if(o.paidAt&&['paid','refunded','charged_back'].indexOf(o.status)>-1&&inR(ymd(o.paidAt),r)){n++;bruto+=o.totalCents;com+=comm(o);pagantes[(o.email||'').toLowerCase()]=1}
+      if((o.status==='refunded'||o.status==='charged_back')&&inR(ymd(o.refundedAt||o.paidAt||o.criadoEm),r))reemb+=o.totalCents;
+      if(o.status==='pending'&&inR(ymd(o.criadoEm),r))pend++;
+    });
+    LEADS.forEach(function(l){if(inR(ymd(l.criadoEm),r))cad++});
+    var np=Object.keys(pagantes).length,pros=LEADS.filter(function(l){return l.tipo==='pro'&&inR(ymd(l.criadoEm),r)}).length;
+    var K=[[brl(bruto),'Vendas brutas'],[brl(reemb),'Reembolsos / contestações'],[brl(bruto-reemb),'Receita líquida'],[brl(com),'Comissão (10%)'],
+      [String(n),'Vendas pagas'],[n?brl(Math.round(bruto/n)):'—','Ticket médio'],[String(cad),'Novos cadastros'],
+      [pros?(Math.round(np/pros*100)+'%'):'—','Profissionais que pagaram a verificação (pagantes ÷ novos cadastros de profissional)'],[String(pend),'Checkouts abertos sem pagar']];
+    var box=$('kpis');box.textContent='';
+    K.forEach(function(k){var d=document.createElement('div');d.className='kpi';var b=document.createElement('b');b.textContent=k[0];var sp=document.createElement('span');sp.textContent=k[1];d.appendChild(b);d.appendChild(sp);box.appendChild(d)});
+    // gráfico: últimos 12 meses (receita líquida do mês)
+    var gm=agg(function(i){return ymd(i).slice(0,7)}),now=new Date(),ks=[];
+    for(var i=11;i>=0;i--){var d=new Date(now.getFullYear(),now.getMonth()-i,1);ks.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'))}
+    var vals=ks.map(function(k){var x=gm[k];return x?x.bruto-x.reemb:0}),mx=Math.max.apply(null,vals.concat([1]));
+    var bars=$('bars'),bl=$('bl');bars.textContent='';bl.textContent='';
+    ks.forEach(function(k,i){
+      var w=document.createElement('div'),b=document.createElement('i');b.style.height=Math.max(2,vals[i]/mx*100)+'%';
+      w.title=mlabel(k)+': '+brl(vals[i]);w.appendChild(b);bars.appendChild(w);
+      var s=document.createElement('span');s.textContent=mlabel(k).slice(0,3);bl.appendChild(s);
+    });
+    fillTable('mrows',gm,mlabel);
+    fillTable('yrows',agg(function(i){return ymd(i).slice(0,4)}),function(k){return k});
+    $('rnote').textContent='Comissão de 10% aparece quando o pagamento dentro do app estiver ativo; hoje a receita é só a taxa de verificação. A tarifa do Mercado Pago é descontada na sua conta MP, então o valor que cai lá é menor que o bruto.';
+  }
+  $('per').addEventListener('change',renderReport);$('d1').addEventListener('change',renderReport);$('d2').addEventListener('change',renderReport);
+  $('ocsv').addEventListener('click',function(){
+    function q(v){v=v==null?'':String(v);if(/^[=+\-@\t\r]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'}
+    var L=[['Criado em','Pago em','Estornado em','Item','Nome','E-mail','Valor (R$)','Status','Pagamento MP','Pedido']];
+    ORDERS.forEach(function(o){L.push([o.criadoEm,o.paidAt||'',o.refundedAt||'',o.item,o.nome,o.email,(o.totalCents/100).toFixed(2).replace('.',','),o.status,o.paymentId||'',o.id])});
+    var b=new Blob(['﻿'+L.map(function(r){return r.map(q).join(';')}).join('\r\n')],{type:'text/csv;charset=utf-8'});
+    var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='pedidos.csv';document.body.appendChild(a);a.click();a.remove();
+  });
   function loadOrders(){
     return fetch('/api/pedidos',{headers:auth()}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){
-      $('orders').hidden=false;ORDERS=d.items;renderOrders();
+      $('orders').hidden=false;ORDERS=d.items;renderOrders();renderReport();
     }).catch(function(){});
   }
   $('hidepend').addEventListener('change',renderOrders);

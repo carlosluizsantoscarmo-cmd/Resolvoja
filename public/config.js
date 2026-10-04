@@ -1,0 +1,9 @@
+// Configurações públicas do site. Só valores que podem ficar visíveis (nada de senhas aqui).
+window.RJ = {
+  // Número do WhatsApp de suporte, com DDI e DDD, só dígitos. Exemplo: "5527999999999". Vazio = o botão não aparece.
+  whatsapp: "",
+  // Mensagem que já vem escrita quando a pessoa abre o WhatsApp.
+  whatsappMsg: "Olá! Vim pelo site do Resolvo Já e preciso de ajuda.",
+  // Chave do site (Site Key) do Cloudflare Turnstile. Vazia = a verificação anti-robô fica desligada.
+  turnstile: ""
+};

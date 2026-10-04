@@ -33,6 +33,25 @@ const CITIES = ["Serra", "Vitória", "Vila Velha", "Cariacica", "Outra"];
 const EXPERIENCE = ["Menos de 1 ano", "1 a 3 anos", "3 a 10 anos", "Mais de 10 anos"];
 const clean = (v, max) => (typeof v === "string" ? v.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max) : "");
 
+// Proteção contra robôs (Cloudflare Turnstile). Só vale se o segredo TURNSTILE_SECRET existir; sem ele, o site funciona como antes.
+async function turnstileOk(env, token, request) {
+  if (!env.TURNSTILE_SECRET) return true;
+  if (typeof token !== "string" || !token || token.length > 2048) return false;
+  try {
+    const form = new FormData();
+    form.append("secret", env.TURNSTILE_SECRET);
+    form.append("response", token);
+    const ip = request.headers.get("CF-Connecting-IP");
+    if (ip) form.append("remoteip", ip);
+    const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body: form });
+    const d = await r.json();
+    return d && d.success === true;
+  } catch (e) {
+    console.error("turnstile: falha ao verificar:", e && e.message);
+    return false;
+  }
+}
+
 async function leadPost({ request, env, ctx }) {
   if (!env.LEADS) return json(500, { error: "Servidor sem armazenamento configurado." });
 
@@ -45,13 +64,14 @@ async function leadPost({ request, env, ctx }) {
   }
 
   const raw = await request.text();
-  if (raw.length > 5000) return json(413, { error: "Pedido grande demais." });
+  if (raw.length > 6000) return json(413, { error: "Pedido grande demais." });
   let b;
   try { b = JSON.parse(raw); } catch { return json(400, { error: "Pedido inválido." }); }
   if (!b || typeof b !== "object") return json(400, { error: "Pedido inválido." });
 
   // Campo-isca: pessoas não veem; robôs preenchem. Finge sucesso e não grava.
   if (typeof b.website === "string" && b.website !== "") return json(200, { ok: true });
+  if (!(await turnstileOk(env, b.turnstile, request))) return json(400, { error: "Não foi possível confirmar que você não é um robô. Atualize a página e tente de novo." });
 
   const tipo = b.tipo === "pro" ? "pro" : b.tipo === "cliente" ? "cliente" : null;
   const nome = clean(b.nome, 100);
@@ -210,11 +230,12 @@ async function checkoutPost({ request, env }) {
   if (!env.MP_ACCESS_TOKEN) return json(503, { error: "O pagamento ainda não está configurado." });
   if (!originAllowed(request, env)) return json(403, { error: "Origem não permitida." });
   const raw = await request.text();
-  if (raw.length > 2000) return json(413, { error: "Pedido grande demais." });
+  if (raw.length > 4000) return json(413, { error: "Pedido grande demais." });
   let b;
   try { b = JSON.parse(raw); } catch { return json(400, { error: "Pedido inválido." }); }
   if (!b || typeof b !== "object") return json(400, { error: "Pedido inválido." });
   if (typeof b.website === "string" && b.website !== "") return json(200, { ok: true }); // isca de robô
+  if (!(await turnstileOk(env, b.turnstile, request))) return json(400, { error: "Não foi possível confirmar que você não é um robô. Atualize a página e tente de novo." });
 
   const item = Object.prototype.hasOwnProperty.call(CATALOGO, b.item) ? CATALOGO[b.item] : null;
   const nome = clean(b.nome, 100);

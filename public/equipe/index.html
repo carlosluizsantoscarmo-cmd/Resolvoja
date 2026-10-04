@@ -90,7 +90,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
   var CFG = window.RESOLVO_JA_CONFIG || {};
   var LIVE = !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
   var $app = document.getElementById('app');
-  var state = { tab:'cadastros', pros:[], reqs:[], disputes:[], payouts:[], audit:[], user:null };
+  var state = { tab:'cadastros', pros:[], reqs:[], disputes:[], payouts:[], negs:[], audit:[], user:null };
 
   /* ---------------------------------------------------------- utilidades */
   function esc(s){ var d=document.createElement('div'); d.textContent = s==null ? '' : String(s); return d.innerHTML; }
@@ -124,6 +124,10 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
     disputes:[
       {id:'d1',reason:'O vazamento voltou no dia seguinte ao serviço.',status:'open',created_at:'2026-10-01T20:00:00Z',service_requests:{title:'Vazamento na pia da cozinha'}}
     ],
+    negs:[
+      {request_id:'n1',title:'Vazamento na pia',category:'Encanador',bairro:'Laranjeiras',status:'awaiting_payment',amount_cents:15000,eta:'Amanhã à tarde',accepted_at:'2026-10-03T14:10:00Z',client_name:'Ana Souza',client_phone:'(27) 9 9999-0000',pro_name:'Edmilson Barros',pro_phone:'(27) 9 9733-0099'},
+      {request_id:'n2',title:'Montar guarda-roupa de 6 portas',category:'Montador',bairro:'Jardim Limoeiro',status:'hired',amount_cents:16000,eta:'Sábado, 9h',accepted_at:'2026-10-02T10:02:00Z',client_name:'Paula Lima',client_phone:'(27) 9 9811-2200',pro_name:'Marcos Vinícius',pro_phone:'(27) 9 9644-8800'}
+    ],
     payouts:[
       {id:'s1',amount_cents:16200,pix_key:'marcos@exemplo.com',status:'requested',requested_at:'2026-10-02T08:20:00Z',pro_profiles:{profiles:{name:'Marcos Vinícius'}}},
       {id:'s2',amount_cents:9000,pix_key:'(27) 9 9644-8800',status:'paid',requested_at:'2026-09-29T10:00:00Z',pro_profiles:{profiles:{name:'Marcos Vinícius'}}}
@@ -136,8 +140,9 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
     api = {
       login:function(){ return Promise.resolve({name:'Equipe Resolvo Já (demonstração)'}); },
       logout:function(){ return Promise.resolve(); },
-      load:function(){ state.pros=demo.pros; state.reqs=demo.reqs; state.disputes=demo.disputes; state.payouts=demo.payouts; return Promise.resolve(); },
+      load:function(){ state.pros=demo.pros; state.reqs=demo.reqs; state.disputes=demo.disputes; state.payouts=demo.payouts; state.negs=demo.negs; return Promise.resolve(); },
       docUrl:function(){ return Promise.reject(new Error('No modo demonstração não há documentos.')); },
+      markPaid:function(id){ demo.negs.forEach(function(n){ if(n.request_id===id) n.status='hired'; }); return Promise.resolve(); },
       setPro:function(id,status){ demo.pros.forEach(function(p){ if(p.user_id===id) p.status=status; }); return Promise.resolve(); },
       resolve:function(id,outcome){
         demo.disputes.forEach(function(d){ if(d.id===id) d.status=outcome; });
@@ -175,9 +180,12 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
           sb.from('service_requests').select('id,title,status,created_at,categories(name)').order('created_at',{ascending:false}).limit(100),
           sb.from('disputes').select('id,reason,status,created_at,service_requests(title)').order('created_at',{ascending:false}).limit(100),
           sb.from('payouts').select('id,amount_cents,pix_key,status,requested_at,pro_profiles(profiles(name))').order('requested_at',{ascending:false}).limit(100)
-        ]).then(function(r){ state.pros=need(r[0])||[]; state.reqs=need(r[1])||[]; state.disputes=need(r[2])||[]; state.payouts=need(r[3])||[]; });
+        ]).then(function(r){ state.pros=need(r[0])||[]; state.reqs=need(r[1])||[]; state.disputes=need(r[2])||[]; state.payouts=need(r[3])||[];
+          return sb.rpc('admin_negotiations').then(function(n){ state.negs = n.error ? [] : (n.data||[]); state.negsErr = n.error ? n.error.message : ''; });
+        });
       },
       docUrl:function(path){ return sb.storage.from('documentos').createSignedUrl(path,120).then(function(r){ if(r.error||!r.data) throw new Error('Não foi possível abrir o documento.'); return r.data.signedUrl; }); },
+      markPaid:function(id){ return sb.rpc('admin_mark_paid',{p_request:id,p_method:'pix'}).then(need); },
       setPro:function(id,status){ return sb.rpc('set_pro_status',{p_pro:id,p_status:status}).then(need); },
       resolve:function(id,outcome,note){ return sb.rpc('resolve_dispute',{p_dispute:id,p_outcome:outcome,p_note:note}).then(need); },
       payout:function(id,status){ return sb.rpc(status==='paid'?'mark_payout_paid':'mark_payout_failed',{p_payout:id}).then(need); }
@@ -209,13 +217,14 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       cadastros: state.pros.filter(function(p){return p.status==='pending';}).length,
       pedidos: state.reqs.filter(function(r){return r.status==='disputed';}).length,
       disputas: state.disputes.filter(function(d){return d.status==='open';}).length,
-      saques: state.payouts.filter(function(p){return p.status==='requested';}).length
+      saques: state.payouts.filter(function(p){return p.status==='requested';}).length,
+      negs: state.negs.filter(function(n){return n.status==='awaiting_payment';}).length
     };
   }
 
   function renderApp(){
     var c = counts();
-    var tabs = [['cadastros','Cadastros',c.cadastros],['pedidos','Pedidos',null],['disputas','Disputas',c.disputas],['saques','Saques',c.saques]];
+    var tabs = [['cadastros','Cadastros',c.cadastros],['negociacoes','Negociações',c.negs],['pedidos','Pedidos',null],['disputas','Disputas',c.disputas],['saques','Saques',c.saques]];
     var open = state.payouts.filter(function(p){return p.status==='requested';}).reduce(function(a,p){return a+p.amount_cents;},0);
     $app.innerHTML =
       (LIVE ? '' : '<div class="demo">Modo demonstração: os dados são de exemplo e nada é salvo.</div>') +
@@ -225,12 +234,17 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
         return '<button class="tab" role="tab" aria-selected="'+(state.tab===t[0])+'" data-tab="'+t[0]+'">'+t[1]+(t[2]===null?'':' <span class="count'+(t[2]?'':' zero')+'">'+t[2]+'</span>')+'</button>';
       }).join('') + '</nav></div></header>' +
       '<main class="wrap"><div class="kpis">' +
-        kpi('Cadastros para verificar', c.cadastros) + kpi('Pedidos em disputa', c.pedidos) +
+        kpi('Cadastros para verificar', c.cadastros) + kpi('Negociações a pagar', c.negs) + kpi('Pedidos em disputa', c.pedidos) +
         kpi('Disputas abertas', c.disputas) + kpi('Saques a pagar', money(open)) +
       '</div><section id="view"></section></main>';
     document.getElementById('out').addEventListener('click', function(){ api.logout().then(function(){ state.user=null; renderLogin(); }); });
     Array.prototype.forEach.call(document.querySelectorAll('[data-tab]'), function(b){ b.addEventListener('click', function(){ state.tab=b.getAttribute('data-tab'); renderApp(); }); });
     renderView();
+  }
+  function wa(phone,msg){
+    var d=String(phone||'').replace(/\D/g,''); if(d.length<10) return '';
+    if(d.indexOf('55')!==0) d='55'+d;
+    return ' <a class="btn ghost" style="padding:4px 10px;font-size:13px" target="_blank" rel="noopener" href="https://wa.me/'+d+'?text='+encodeURIComponent(msg)+'">WhatsApp</a>';
   }
   function kpi(l,v){ return '<div class="kpi"><span>'+esc(l)+'</span><b>'+esc(v)+'</b></div>'; }
   function empty(t,s){ return '<div class="empty"><b>'+esc(t)+'</b>'+esc(s)+'</div>'; }
@@ -251,6 +265,21 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
               (p.status==='approved' ? '<button class="btn ghost" data-pro="'+esc(p.user_id)+'" data-to="suspended">Suspender</button>' : '') +
             '</div></td></tr>';
         }).join('') + '</tbody></table></div>' : empty('Nenhum cadastro ainda','Os profissionais aparecem aqui assim que se cadastrarem.');
+    } else if(state.tab==='negociacoes'){
+      h = '<h2>Negociações</h2><p class="sub">Pedidos em que o cliente já escolheu uma proposta. Combine o pagamento pelo WhatsApp e, quando receber, clique em “Marcar como pago”.</p>';
+      if(state.negsErr) h += '<p class="sub" style="color:var(--err,#B3261E)">Não foi possível carregar: '+esc(state.negsErr)+'. Confira se a migração 006 foi rodada no Supabase.</p>';
+      h += state.negs.length ? '<div class="tw"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Profissional</th><th>Valor</th><th>Status</th><th>Ação</th></tr></thead><tbody>' +
+        state.negs.map(function(n){
+          var wait = n.status==='awaiting_payment';
+          var mc = 'Olá, '+n.client_name+'! Aqui é do Resolvo Já. Você escolheu a proposta de '+n.pro_name+' para "'+n.title+'" ('+money(n.amount_cents)+'). Vamos combinar o pagamento?';
+          var mp = 'Olá, '+n.pro_name+'! Aqui é do Resolvo Já. O cliente aceitou sua proposta para "'+n.title+'" ('+money(n.amount_cents)+'). Estamos combinando o pagamento e já te avisamos para seguir.';
+          return '<tr><td><b>'+esc(n.title)+'</b><small>'+esc(n.category)+' · '+esc(n.bairro)+' · '+esc(when(n.accepted_at))+'</small></td>' +
+            '<td>'+esc(n.client_name)+'<small>'+esc(n.client_phone||'sem telefone')+'</small>'+wa(n.client_phone,mc)+'</td>' +
+            '<td>'+esc(n.pro_name)+'<small>'+esc(n.pro_phone||'sem telefone')+'</small>'+wa(n.pro_phone,mp)+'</td>' +
+            '<td class="num">'+esc(money(n.amount_cents))+'<small>comissão '+esc(money(Math.round(n.amount_cents/10)))+'</small></td>' +
+            '<td>'+(wait?'<span class="pill warn">Aguardando pagamento</span>':'<span class="pill ok">Pago · em andamento</span>')+'</td>' +
+            '<td>'+(wait?'<button class="btn" data-paid="'+esc(n.request_id)+'">Marcar como pago</button>':'')+'</td></tr>';
+        }).join('') + '</tbody></table></div>' : empty('Nenhuma negociação','Quando um cliente aceitar uma proposta, ela aparece aqui e você recebe um e-mail.');
     } else if(state.tab==='pedidos'){
       h = '<h2>Pedidos</h2><p class="sub">Os 100 mais recentes. Pedidos em disputa aparecem marcados.</p>';
       h += state.reqs.length ? '<div class="tw"><table><thead><tr><th>Pedido</th><th>Categoria</th><th>Criado</th><th>Status</th></tr></thead><tbody>' +
@@ -281,6 +310,12 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
     function run(p,okMsg){
       p.then(function(){ toast(okMsg); return api.load(); }).then(renderApp).catch(function(e){ toast(e.message||'Não foi possível concluir.', true); });
     }
+    Array.prototype.forEach.call(v.querySelectorAll('[data-paid]'), function(b){
+      b.addEventListener('click', function(){
+        if(!window.confirm('Você já recebeu o pagamento deste pedido? Isso libera o início do serviço e não pode ser desfeito aqui.')) return;
+        b.disabled=true; run(api.markPaid(b.getAttribute('data-paid')), 'Pagamento registrado. Pedido em andamento.');
+      });
+    });
     Array.prototype.forEach.call(v.querySelectorAll('[data-doc]'), function(b){
       b.addEventListener('click', function(){
         var w = window.open('', '_blank');

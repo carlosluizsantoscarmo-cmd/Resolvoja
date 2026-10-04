@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Resolvo Já</title>
-<meta name="description" content="Descreva o serviço, receba propostas de profissionais perto de você e contrate com segurança. Piloto na Serra, ES. Entre na lista.">
+<meta name="description" content="Descreva o serviço, receba propostas de profissionais perto de você e contrate com segurança. Começamos na Grande Vitória, ES. Entre na lista da sua cidade.">
 <meta property="og:title" content="Resolvo Já">
-<meta property="og:description" content="Descreva o serviço, receba propostas e contrate com segurança. Piloto na Serra, ES.">
+<meta property="og:description" content="Descreva o serviço, receba propostas e contrate com segurança. Começamos na Grande Vitória, ES.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://resolvoja.app.br/og.png">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
@@ -188,12 +188,12 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
   <div class="hero-grid" id="topo">
    <div>
     <h1>Descreva o serviço. Receba propostas. Contrate com segurança.</h1>
-    <p class="lead">O Resolvo Já conecta moradores da Serra e da Grande Vitória a eletricistas, encanadores e montadores que atendem perto de casa. Você compara preço, avaliação e horário antes de decidir.</p>
+    <p class="lead">O Resolvo Já conecta moradores da Grande Vitória a eletricistas, encanadores e montadores que atendem perto de casa. Você compara preço, avaliação e horário antes de decidir.</p>
     <div class="cta">
      <a class="btn sun" href="#cadastro" data-pick="cliente">Quero contratar</a>
      <a class="btn line" href="#cadastro" data-pick="pro">Sou profissional</a>
     </div>
-    <p class="fine">Piloto em preparação na Serra. Entre na lista para ser avisado quando abrir na sua região. Já recebeu acesso? <a href="/app/">Abrir o app</a>.</p>
+    <p class="fine">Piloto em preparação na Grande Vitória. Entre na lista para ser avisado quando abrir na sua região. Já recebeu acesso? <a href="/app/">Abrir o app</a>.</p>
    </div>
    <div class="demo" aria-label="Exemplo de pedido e propostas">
     <div class="req"><small>Pedido enviado há 8 minutos · Laranjeiras, Serra</small><b>Montar guarda-roupa de 6 portas</b></div>
@@ -246,10 +246,9 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
 
 <section id="onde">
  <div class="wrap">
-  <div class="sec-h"><h2>Começamos pequeno, na Serra</h2><p>O piloto abre em poucos bairros e cresce conforme houver profissionais disponíveis. Quem entrar na lista agora é avisado primeiro.</p></div>
-  <div class="places" aria-label="Regiões do piloto">
-   <span class="place on">Laranjeiras</span><span class="place on">Carapina</span><span class="place on">Valparaíso</span><span class="place on">Jardim Limoeiro</span><span class="place on">Manguinhos</span>
-   <span class="place">Jacaraípe · depois</span><span class="place">Vitória · depois</span><span class="place">Vila Velha · depois</span><span class="place">Cariacica · depois</span>
+  <div class="sec-h"><h2>Começamos na Grande Vitória. Em breve, no seu bairro.</h2><p>Os pedidos já estão abertos nestas cidades. Mora em outro lugar? Entre na lista: avisamos assim que chegarmos na sua cidade.</p></div>
+  <div class="places" aria-label="Cidades com atendimento">
+   <span class="place on">Serra</span><span class="place on">Vitória</span><span class="place on">Vila Velha</span><span class="place on">Cariacica</span><span class="place on">Viana</span><span class="place on">Guarapari</span><span class="place">Sua cidade · entre na lista</span>
   </div>
  </div>
 </section>
@@ -267,8 +266,10 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
      <div><label class="l" for="nome">Nome</label><input id="nome" type="text" autocomplete="name" required></div>
      <div><label class="l" for="zap">WhatsApp com DDD</label><input id="zap" type="tel" inputmode="tel" autocomplete="tel" placeholder="(27) 9 0000-0000" required></div>
      <div><label class="l" for="bairro">Bairro</label><input id="bairro" type="text" autocomplete="address-level3" placeholder="Ex.: Laranjeiras" required></div>
-     <div><label class="l" for="cidade">Cidade</label>
-      <select id="cidade"><option>Serra</option><option>Vitória</option><option>Vila Velha</option><option>Cariacica</option><option>Outra</option></select></div>
+     <div><label class="l" for="cidade">Cidade</label><input id="cidade" type="text" list="cidades" autocomplete="address-level2" placeholder="Ex.: Serra" required>
+      <datalist id="cidades"><option value="Serra"><option value="Vitória"><option value="Vila Velha"><option value="Cariacica"><option value="Viana"><option value="Guarapari"></datalist></div>
+     <div><label class="l" for="uf">Estado</label>
+      <select id="uf"><option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option><option>CE</option><option>DF</option><option selected>ES</option><option>GO</option><option>MA</option><option>MT</option><option>MS</option><option>MG</option><option>PA</option><option>PB</option><option>PR</option><option>PE</option><option>PI</option><option>RJ</option><option>RN</option><option>RS</option><option>RO</option><option>RR</option><option>SC</option><option>SP</option><option>SE</option><option>TO</option></select></div>
      <div class="full" id="box-cli">
       <span class="lbl" id="l-cli">Que serviço você costuma precisar?</span>
       <div class="pills" role="group" aria-labelledby="l-cli">
@@ -314,9 +315,9 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
    <details><summary>Quanto custa para o profissional?</summary><p>Entrar na lista é grátis. Quando o app abrir, o Resolvo Já fica com 10% de cada serviço contratado e pago pelo app, e você recebe o resto. A verificação do perfil é opcional e custa R$ 29,90, uma única vez.</p></details>
    <details><summary>O que é a verificação de profissional?</summary><p>Conferimos seus dados cadastrais e, quando o app estiver disponível, você recebe o selo "Profissional verificado". Ela ajuda a passar confiança, mas não garante a quantidade de pedidos.</p></details>
    <details><summary>Posso pedir o dinheiro de volta?</summary><p>Sim. Você tem 7 dias corridos depois do pagamento para desistir e receber o reembolso integral. Veja os <a href="/termos.html">Termos e reembolso</a>.</p></details>
-   <details><summary>Quando o aplicativo abre?</summary><p>O piloto começa por poucos bairros da Serra. Quem está na lista é avisado pelo WhatsApp antes de todo mundo.</p></details>
+   <details><summary>Quando o aplicativo abre?</summary><p>O piloto começa na Grande Vitória (Serra, Vitória, Vila Velha, Cariacica, Viana e Guarapari). Quem está na lista é avisado pelo WhatsApp antes de todo mundo.</p></details>
    <details><summary>Meus dados estão seguros?</summary><p>Usamos seus dados só para falar sobre o piloto e você pode pedir a exclusão quando quiser. Pagamentos são feitos no Mercado Pago, e não guardamos dados de cartão. Leia a <a href="/privacidade.html">Política de Privacidade</a>.</p></details>
-   <details><summary>Onde vocês atendem?</summary><p>Começamos na Serra e na Grande Vitória, ES, e crescemos conforme houver profissionais disponíveis em cada região.</p></details>
+   <details><summary>Onde vocês atendem?</summary><p>Começamos na Grande Vitória, ES (Serra, Vitória, Vila Velha, Cariacica, Viana e Guarapari). Você pode entrar na lista de qualquer cidade do Brasil: abrimos uma região nova assim que houver profissionais disponíveis nela.</p></details>
   </div>
  </div>
 </section>
@@ -352,10 +353,11 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
     if(!nome){show('err','Informe seu nome.');$('nome').focus();return}
     if(digits.length<10||digits.length>13){show('err','Confira o WhatsApp. Use o DDD, por exemplo (27) 9 0000-0000.');$('zap').focus();return}
     if(!bairro){show('err','Informe o seu bairro.');$('bairro').focus();return}
+    if(!$('cidade').value.trim()){show('err','Informe a sua cidade.');$('cidade').focus();return}
     if(!$('lgpd').checked){show('err','Marque a autorização para continuar.');$('lgpd').focus();return}
     var cats=Array.prototype.map.call(document.querySelectorAll('input[name="cat-'+(kind==='pro'?'pro':'cli')+'"]:checked'),function(i){return i.value});
     if(kind==='pro'&&!cats.length){show('err','Escolha pelo menos uma categoria em que você trabalha.');return}
-    var rec={tipo:kind,nome:nome,whatsapp:zap,bairro:bairro,cidade:$('cidade').value,categorias:cats,obs:$('obs').value.trim().slice(0,500),lgpd:true,website:$('website').value};
+    var rec={tipo:kind,nome:nome,whatsapp:zap,bairro:bairro,cidade:$('cidade').value.trim(),uf:$('uf').value,categorias:cats,obs:$('obs').value.trim().slice(0,500),lgpd:true,website:$('website').value};
     if(window.RJ&&RJ.enabled()){if(!RJ.token()){show('err','Aguarde a verificação anti-robô terminar e tente de novo.');return}rec.turnstile=RJ.token()}
     if(kind==='pro')rec.experiencia=$('exp').value;
     var btn=$('send');btn.disabled=true;show('info','Enviando seu cadastro...');

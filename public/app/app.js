@@ -51,6 +51,9 @@
     list: '<path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/>',
     chat: '<path d="M4 5h16v11H9l-5 4z"/>',
     user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+    brush: '<path d="M18 3l3 3-9 9-3-3z"/><path d="M9 12c-3 0-4 2-4 4s-1 3-2 4c3 1 8 0 8-5"/>',
+    broom: '<path d="M14 3l-4 8"/><path d="M7 11h8l3 10H4z"/>',
+    truck: '<path d="M2 6h11v10H2zM13 9h5l3 3v4h-8"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
     bolt: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
     drop: '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
     wrench: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>',
@@ -63,7 +66,7 @@
     star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" fill="currentColor"/>'
   };
   function icon(n, s) { s = s || 22; return '<svg class="ic" width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[n] || "") + "</svg>"; }
-  function catIcon(name) { var n = String(name || "").toLowerCase(); return /eletric/.test(n) ? "bolt" : /encan|hidr/.test(n) ? "drop" : "wrench"; }
+  function catIcon(name) { var n = String(name || "").toLowerCase(); return /eletric/.test(n) ? "bolt" : /encan|hidr/.test(n) ? "drop" : /pintor/.test(n) ? "brush" : /diarista|limpez/.test(n) ? "broom" : /frete|mudan/.test(n) ? "truck" : "wrench"; }
   function initials(n) { var p = String(n || "?").trim().split(/\s+/); return ((p[0] || "?").charAt(0) + (p[1] ? p[1].charAt(0) : "")).toUpperCase(); }
   var AVC = ["", "g", "o", "p"];
   function avatar(n, i) { return '<span class="av ' + AVC[(i || 0) % 4] + '" aria-hidden="true">' + e(initials(n)) + "</span>"; }

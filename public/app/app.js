@@ -599,12 +599,24 @@
     });
     return mpSdk;
   }
+  // Script de segurança do Mercado Pago: gera o Device ID (window.MP_DEVICE_SESSION_ID) usado pelo antifraude.
+  var mpSec = null;
+  function loadMpSecurity() {
+    if (window.MP_DEVICE_SESSION_ID) return Promise.resolve();
+    if (mpSec) return mpSec;
+    mpSec = new Promise(function (ok) {
+      var s = document.createElement("script"); s.src = "https://www.mercadopago.com/v2/security.js"; s.setAttribute("view", "checkout");
+      s.onload = function () { setTimeout(ok, 600); }; s.onerror = function () { ok(); };
+      document.head.appendChild(s);
+    });
+    return mpSec;
+  }
   function payBox(msg, cls) { var b = $("payerr"); if (b) b.innerHTML = msg ? '<div class="banner ' + (cls || "err") + '" role="alert">' + e(msg) + "</div>" : ""; }
 
   // Tela de pagamento do cliente (pedido em "awaiting_payment" com o profissional já conectado).
   function payHtml(amount) {
     return '<h2>Pagamento</h2><div class="card" id="paycard"><div class="row"><span>Valor do serviço</span><span class="price">' + brl(amount) + '</span></div>' +
-      '<p class="muted small" style="margin:8px 0 12px">Pagamento seguro pelo Mercado Pago. O valor só é repassado ao profissional depois que você confirmar o serviço.</p>' +
+      '<p class="muted small" style="margin:8px 0 12px">Pagamento seguro pelo Mercado Pago. O valor só é repassado ao profissional depois que você confirmar o serviço.</p><p class="muted small" style="margin:0 0 12px"><b>Para pagar com cartão, use um cartão no seu nome.</b> Cartão de outra pessoa pode ser recusado por segurança. Se for o caso, use o Pix.</p>' +
       '<div id="payerr"></div><div class="chips" id="pm"><button type="button" class="full" id="pix">Pagar com Pix</button><button type="button" class="ghost full" id="crd">Pagar com cartão</button></div><div id="paybody"></div></div>';
   }
   function pixView(pix) {
@@ -630,6 +642,7 @@
       var cfg = await fetch("/api/mp/config").then(function (x) { return x.json(); });
       if (!cfg.public_key) throw new Error("Pagamento por cartão ainda não está disponível.");
       await loadMpSdk();
+      await loadMpSecurity();
       var mp = new window.MercadoPago(cfg.public_key, { locale: "pt-BR" });
       $("paybody").innerHTML = '<div id="cardbrick"></div>';
       await mp.bricks().create("cardPayment", "cardbrick", {
@@ -655,6 +668,8 @@
     if (p && p.status === "pending" && p.method === "pix" && p.pix_code && (!p.expires_at || Date.parse(p.expires_at) > Date.now())) pixView({ code: p.pix_code, qr_base64: p.pix_qr, expires_at: p.expires_at });
     $("pix").onclick = function () { startPix(id); };
     $("crd").onclick = function () { startCard(id, amount); };
+    // O cartão aparece sempre; some só se MP_CARTAO_ATIVO=0 no Cloudflare.
+    fetch("/api/mp/config").then(function (x) { return x.json(); }).then(function (c) { if (c && c.card_enabled === false && $("crd")) $("crd").hidden = true; }, function () {});
   }
   function doneHtml(pay) {
     var how = pay && pay.method === "card" ? "O valor está reservado no seu cartão e só será cobrado quando você confirmar o serviço (ou automaticamente em até 4 dias)." : "Pagamento por Pix confirmado.";

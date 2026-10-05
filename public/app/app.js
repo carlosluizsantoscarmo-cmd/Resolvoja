@@ -327,7 +327,7 @@
   async function route() {
     stopTimer();
     if (!sb) return screenConfig(CFG.anonKey ? "Não foi possível carregar o aplicativo. Confira a internet e abra de novo." : "Falta configurar a chave pública do banco de dados.");
-    if (!user) return screenAuth();
+    if (!user) return screenAuth(hashParts().q.get("modo") === "cadastro" ? "signup" : "login");
     if (recovering) return screenNewPassword();
     loading();
     try {

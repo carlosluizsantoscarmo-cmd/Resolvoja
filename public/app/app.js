@@ -640,7 +640,7 @@
           onError: function () { payBox("Confira os dados do cartão e tente de novo."); },
           onSubmit: function (d) {
             payBox("");
-            return api("/api/mp/pay", { request_id: id, method: "card", token: d.token, installments: d.installments, payment_method_id: d.payment_method_id, issuer_id: d.issuer_id, identification: d.payer && d.payer.identification }).then(function (r) {
+            return api("/api/mp/pay", { request_id: id, method: "card", token: d.token, installments: d.installments, payment_method_id: d.payment_method_id, issuer_id: d.issuer_id, device_id: window.MP_DEVICE_SESSION_ID || null, identification: d.payer && d.payer.identification }).then(function (r) {
               if (!r.ok) { payBox(r.error || "Pagamento não aprovado."); throw new Error("recusado"); }
               toast("Pagamento reservado no cartão!"); route();
             });

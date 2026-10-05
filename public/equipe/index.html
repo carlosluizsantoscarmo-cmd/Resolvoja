@@ -90,7 +90,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
   var CFG = window.RESOLVO_JA_CONFIG || {};
   var LIVE = !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
   var $app = document.getElementById('app');
-  var state = { tab:'cadastros', pros:[], reqs:[], disputes:[], payouts:[], negs:[], audit:[], user:null };
+  var state = { tab:'visao', pros:[], reqs:[], disputes:[], payouts:[], negs:[], audit:[], cats:[], regs:[], reports:[], ov:null, user:null };
 
   /* ---------------------------------------------------------- utilidades */
   function esc(s){ var d=document.createElement('div'); d.textContent = s==null ? '' : String(s); return d.innerHTML; }
@@ -99,6 +99,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
   var STATUS_REQ = { open:['Aberto','info'], awaiting_payment:['Aguardando pagamento','warn'], hired:['Contratado','info'], completed:['Concluído','ok'], cancelled:['Cancelado','err'], disputed:['Em disputa','err'] };
   var STATUS_PAYOUT = { requested:['Pedido','warn'], paid:['Pago','ok'], failed:['Recusado','err'] };
   var STATUS_DISPUTE = { open:['Aberta','err'], resolved_refund:['Reembolsada','info'], resolved_partial:['Parcial','info'], resolved_release:['Liberada','ok'] };
+  var STATUS_REPORT = { open:['Aberta','err'], reviewing:['Em análise','warn'], dismissed:['Arquivada','info'], actioned:['Resolvida','ok'] };
   var STATUS_PRO = { pending:['Pendente','warn'], approved:['Aprovado','ok'], suspended:['Suspenso','err'] };
   function pill(map,k){ var m=map[k]||[k,'info']; return '<span class="pill '+m[1]+'">'+esc(m[0])+'</span>'; }
   function toast(msg,isErr){
@@ -128,6 +129,10 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       {request_id:'n1',title:'Vazamento na pia',category:'Encanador',bairro:'Laranjeiras',status:'awaiting_payment',amount_cents:15000,eta:'Amanhã à tarde',accepted_at:'2026-10-03T14:10:00Z',client_name:'Ana Souza',client_phone:'(27) 9 9999-0000',pro_name:'Edmilson Barros',pro_phone:'(27) 9 9733-0099'},
       {request_id:'n2',title:'Montar guarda-roupa de 6 portas',category:'Montador',bairro:'Jardim Limoeiro',status:'hired',amount_cents:16000,eta:'Sábado, 9h',accepted_at:'2026-10-02T10:02:00Z',client_name:'Paula Lima',client_phone:'(27) 9 9811-2200',pro_name:'Marcos Vinícius',pro_phone:'(27) 9 9644-8800'}
     ],
+    cats:[{id:1,name:'Eletricista',active:true},{id:2,name:'Encanador',active:true},{id:3,name:'Pintor',active:false}],
+    regs:[{id:1,city:'Serra',name:'Laranjeiras',active:true},{id:2,city:'Vitória',name:'Jardim da Penha',active:false}],
+    reports:[{id:'rp1',status:'open',reason:'O profissional não compareceu no horário combinado.',created_at:'2026-10-03T12:00:00Z',reporter_name:'Ana Souza',reporter_phone:'(27) 9 9999-0000',target_name:'Edmilson Barros',target_phone:'(27) 9 9733-0099',request_title:'Vazamento na pia'}],
+    ov:{orders_week:12,orders_prev_week:9,orders_30d:40,with_proposal_pct:75,hires_30d:18,hires_pct:45,gmv_cents:420000,commission_cents:42000,hired_clients:10,repeat_clients:2,repeat_pct:20,pros_approved:8,pros_pending:3,clients_total:30,reports_open:1},
     payouts:[
       {id:'s1',amount_cents:16200,pix_key:'marcos@exemplo.com',status:'requested',requested_at:'2026-10-02T08:20:00Z',pro_profiles:{profiles:{name:'Marcos Vinícius'}}},
       {id:'s2',amount_cents:9000,pix_key:'(27) 9 9644-8800',status:'paid',requested_at:'2026-09-29T10:00:00Z',pro_profiles:{profiles:{name:'Marcos Vinícius'}}}
@@ -140,7 +145,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
     api = {
       login:function(){ return Promise.resolve({name:'Equipe Resolvo Já (demonstração)'}); },
       logout:function(){ return Promise.resolve(); },
-      load:function(){ state.pros=demo.pros; state.reqs=demo.reqs; state.disputes=demo.disputes; state.payouts=demo.payouts; state.negs=demo.negs; return Promise.resolve(); },
+      load:function(){ state.pros=demo.pros; state.reqs=demo.reqs; state.disputes=demo.disputes; state.payouts=demo.payouts; state.negs=demo.negs; state.cats=demo.cats; state.regs=demo.regs; state.reports=demo.reports; state.ov=demo.ov; return Promise.resolve(); },
       docUrl:function(){ return Promise.reject(new Error('No modo demonstração não há documentos.')); },
       markPaid:function(id){ demo.negs.forEach(function(n){ if(n.request_id===id) n.status='hired'; }); return Promise.resolve(); },
       setPro:function(id,status){ demo.pros.forEach(function(p){ if(p.user_id===id) p.status=status; }); return Promise.resolve(); },
@@ -149,7 +154,11 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
         demo.reqs.forEach(function(r){ if(r.status==='disputed') r.status = outcome==='resolved_refund' ? 'cancelled' : 'completed'; });
         return Promise.resolve();
       },
-      payout:function(id,status){ demo.payouts.forEach(function(p){ if(p.id===id) p.status=status; }); return Promise.resolve(); }
+      payout:function(id,status){ demo.payouts.forEach(function(p){ if(p.id===id) p.status=status; }); return Promise.resolve(); },
+      addCat:function(n){ demo.cats.push({id:Date.now(),name:n,active:true}); return Promise.resolve(); },
+      addReg:function(c,n){ demo.regs.push({id:Date.now(),city:c,name:n,active:true}); return Promise.resolve(); },
+      toggle:function(t,id,on){ (t==='cat'?demo.cats:demo.regs).forEach(function(x){ if(x.id===id) x.active=on; }); return Promise.resolve(); },
+      report:function(id,st){ demo.reports.forEach(function(r){ if(r.id===id) r.status=st; }); return Promise.resolve(); }
     };
   } else {
     var sb = null;
@@ -198,13 +207,27 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
           sb.from('payouts').select('id,amount_cents,pix_key,status,requested_at,pro_profiles(profiles(name))').order('requested_at',{ascending:false}).limit(100)
         ]).then(function(r){ state.pros=need(r[0])||[]; state.reqs=need(r[1])||[]; state.disputes=need(r[2])||[]; state.payouts=need(r[3])||[];
           return sb.rpc('admin_negotiations').then(function(n){ state.negs = n.error ? [] : (n.data||[]); state.negsErr = n.error ? n.error.message : ''; });
+        }).then(function(){
+          return Promise.all([
+            sb.rpc('admin_overview'), sb.rpc('admin_reports'),
+            sb.from('categories').select('id,name,active').order('name'),
+            sb.from('regions').select('id,city,name,active').order('city').order('name')
+          ]).then(function(r){
+            state.ov = r[0].error ? null : r[0].data; state.ovErr = r[0].error ? r[0].error.message : '';
+            state.reports = r[1].error ? [] : (r[1].data||[]); state.reportsErr = r[1].error ? r[1].error.message : '';
+            state.cats = r[2].error ? [] : (r[2].data||[]); state.regs = r[3].error ? [] : (r[3].data||[]);
+          });
         });
       },
       docUrl:function(path){ return sb.storage.from('documentos').createSignedUrl(path,120).then(function(r){ if(r.error||!r.data) throw new Error('Não foi possível abrir o documento.'); return r.data.signedUrl; }); },
       markPaid:function(id){ return sb.rpc('admin_mark_paid',{p_request:id,p_method:'pix'}).then(need); },
       setPro:function(id,status){ return sb.rpc('set_pro_status',{p_pro:id,p_status:status}).then(need); },
       resolve:function(id,outcome,note){ return sb.rpc('resolve_dispute',{p_dispute:id,p_outcome:outcome,p_note:note}).then(need); },
-      payout:function(id,status){ return sb.rpc(status==='paid'?'mark_payout_paid':'mark_payout_failed',{p_payout:id}).then(need); }
+      payout:function(id,status){ return sb.rpc(status==='paid'?'mark_payout_paid':'mark_payout_failed',{p_payout:id}).then(need); },
+      addCat:function(n){ return sb.from('categories').insert({name:n,active:true}).then(function(r){ if(r.error) throw new Error(/duplicate|unique/i.test(r.error.message)?'Essa categoria já existe.':r.error.message); }); },
+      addReg:function(c,n){ return sb.from('regions').insert({city:c,name:n,active:true}).then(function(r){ if(r.error) throw new Error(/duplicate|unique/i.test(r.error.message)?'Esse bairro já existe nessa cidade.':r.error.message); }); },
+      toggle:function(t,id,on){ return sb.from(t==='cat'?'categories':'regions').update({active:on}).eq('id',id).then(function(r){ if(r.error) throw new Error(r.error.message); }); },
+      report:function(id,st,note){ return sb.rpc('resolve_report',{p_report:id,p_status:st,p_note:note||null}).then(need); }
     };
   }
 
@@ -250,13 +273,14 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       pedidos: state.reqs.filter(function(r){return r.status==='disputed';}).length,
       disputas: state.disputes.filter(function(d){return d.status==='open';}).length,
       saques: state.payouts.filter(function(p){return p.status==='requested';}).length,
-      negs: state.negs.filter(function(n){return n.status==='awaiting_payment';}).length
+      negs: state.negs.filter(function(n){return n.status==='awaiting_payment';}).length,
+      denuncias: state.reports.filter(function(r){return r.status==='open'||r.status==='reviewing';}).length
     };
   }
 
   function renderApp(){
     var c = counts();
-    var tabs = [['cadastros','Cadastros',c.cadastros],['negociacoes','Negociações',c.negs],['pedidos','Pedidos',null],['disputas','Disputas',c.disputas],['saques','Saques',c.saques]];
+    var tabs = [['visao','Visão geral',null],['cadastros','Cadastros',c.cadastros],['negociacoes','Negociações',c.negs],['pedidos','Pedidos',null],['catreg','Categorias e regiões',null],['disputas','Disputas',c.disputas],['denuncias','Denúncias',c.denuncias],['saques','Saques',c.saques]];
     var open = state.payouts.filter(function(p){return p.status==='requested';}).reduce(function(a,p){return a+p.amount_cents;},0);
     $app.innerHTML =
       (LIVE ? '' : '<div class="demo">Modo demonstração: os dados são de exemplo e nada é salvo.</div>') +
@@ -280,12 +304,56 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
     if(d.indexOf('55')!==0) d='55'+d;
     return ' <a class="btn ghost" style="padding:4px 10px;font-size:13px" target="_blank" rel="noopener" href="https://wa.me/'+d+'?text='+encodeURIComponent(msg)+'">WhatsApp</a>';
   }
-  function kpi(l,v){ return '<div class="kpi"><span>'+esc(l)+'</span><b>'+esc(v)+'</b></div>'; }
+  function kpi(l,v,sub){ return '<div class="kpi"><span>'+esc(l)+'</span><b>'+esc(v)+'</b>'+(sub?'<small style="color:var(--muted)">'+esc(sub)+'</small>':'')+'</div>'; }
+  function pct(v){ return v==null ? '—' : v+'%'; }
   function empty(t,s){ return '<div class="empty"><b>'+esc(t)+'</b>'+esc(s)+'</div>'; }
 
   function renderView(){
     var v = document.getElementById('view'), h='';
-    if(state.tab==='cadastros'){
+    if(state.tab==='visao'){
+      var o = state.ov;
+      h = '<h2>Visão geral</h2><p class="sub">Números reais do banco. Porcentagens consideram os pedidos dos últimos 30 dias (sem os cancelados).</p>';
+      if(!o) h += '<p class="sub" style="color:var(--err,#B3261E)">Não foi possível carregar'+(state.ovErr?': '+esc(state.ovErr):'')+'. Confira se a migração 010 foi rodada no Supabase.</p>';
+      else {
+        var diff = o.orders_prev_week>0 ? Math.round(100*(o.orders_week-o.orders_prev_week)/o.orders_prev_week) : null;
+        h += '<div class="kpis">' +
+          kpi('Pedidos na semana', o.orders_week, diff==null ? 'semana anterior: '+o.orders_prev_week : (diff>=0?'+':'')+diff+'% vs. semana anterior') +
+          kpi('Pedidos com proposta', pct(o.with_proposal_pct), 'de '+o.orders_30d+' pedidos em 30 dias') +
+          kpi('Contratações', o.hires_30d, pct(o.hires_pct)+' dos pedidos em 30 dias') +
+          kpi('Comissão estimada', money(o.commission_cents), '10% de '+money(o.gmv_cents)+' contratados') +
+          kpi('Clientes que voltaram', pct(o.repeat_pct), o.repeat_clients+' de '+o.hired_clients+' com 2ª contratação') +
+          kpi('Profissionais aprovados', o.pros_approved, o.pros_pending+' aguardando aprovação') +
+          kpi('Clientes cadastrados', o.clients_total) +
+          kpi('Denúncias abertas', o.reports_open) + '</div>' +
+          '<p class="sub">A comissão é estimada: 10% do valor das propostas aceitas em pedidos já em andamento ou concluídos. O valor realmente recebido está no Mercado Pago.</p>';
+      }
+    } else if(state.tab==='catreg'){
+      h = '<h2>Categorias e regiões</h2><p class="sub">Só aparece para clientes e profissionais o que estiver ativo. Desativar não apaga pedidos antigos.</p>';
+      h += '<h3 style="margin:18px 0 8px">Categorias de serviço</h3>' +
+        '<form class="resolve" id="addCat" style="grid-template-columns:1fr auto;margin-bottom:12px;max-width:480px"><input id="catName" placeholder="Nova categoria (ex.: Pedreiro)" maxlength="40" aria-label="Nome da nova categoria"><button class="btn" type="submit">Adicionar</button></form>' +
+        (state.cats.length ? '<div class="tw"><table><thead><tr><th>Categoria</th><th>Status</th><th>Ação</th></tr></thead><tbody>' + state.cats.map(function(x){
+          return '<tr><td><b>'+esc(x.name)+'</b></td><td>'+(x.active?'<span class="pill ok">Ativa</span>':'<span class="pill warn">Desativada</span>')+'</td><td><button class="btn ghost" data-tg="cat" data-id="'+esc(x.id)+'" data-on="'+(x.active?'0':'1')+'">'+(x.active?'Desativar':'Ativar')+'</button></td></tr>';
+        }).join('') + '</tbody></table></div>' : empty('Nenhuma categoria','Adicione a primeira acima.'));
+      h += '<h3 style="margin:26px 0 8px">Cidades e bairros atendidos</h3>' +
+        '<form class="resolve" id="addReg" style="grid-template-columns:1fr 1fr auto;margin-bottom:12px;max-width:640px"><input id="regCity" placeholder="Cidade (ex.: Serra)" maxlength="40" aria-label="Cidade"><input id="regName" placeholder="Bairro (ex.: Laranjeiras)" maxlength="60" aria-label="Bairro"><button class="btn" type="submit">Adicionar</button></form>' +
+        (state.regs.length ? '<div class="tw"><table><thead><tr><th>Cidade</th><th>Bairro</th><th>Status</th><th>Ação</th></tr></thead><tbody>' + state.regs.map(function(x){
+          return '<tr><td>'+esc(x.city)+'</td><td><b>'+esc(x.name)+'</b></td><td>'+(x.active?'<span class="pill ok">Ativo</span>':'<span class="pill warn">Desativado</span>')+'</td><td><button class="btn ghost" data-tg="reg" data-id="'+esc(x.id)+'" data-on="'+(x.active?'0':'1')+'">'+(x.active?'Desativar':'Ativar')+'</button></td></tr>';
+        }).join('') + '</tbody></table></div>' : empty('Nenhum bairro','Adicione o primeiro acima.'));
+    } else if(state.tab==='denuncias'){
+      h = '<h2>Denúncias</h2><p class="sub">Clientes e profissionais denunciam pelo app. Abra o WhatsApp para ouvir as duas partes e depois registre a decisão.</p>';
+      if(state.reportsErr) h += '<p class="sub" style="color:var(--err,#B3261E)">Não foi possível carregar: '+esc(state.reportsErr)+'. Confira se a migração 010 foi rodada no Supabase.</p>';
+      h += state.reports.length ? '<div class="tw"><table><thead><tr><th>Quem denunciou</th><th>Contra</th><th>Motivo</th><th>Quando</th><th>Status</th><th>Decisão da equipe</th></tr></thead><tbody>' +
+        state.reports.map(function(r){
+          var act = r.status==='open'||r.status==='reviewing';
+          return '<tr><td><b>'+esc(r.reporter_name)+'</b><small>'+esc(r.reporter_phone||'')+'</small>'+wa(r.reporter_phone,'Olá, '+r.reporter_name+'! Aqui é do Resolvo Já. Recebemos sua denúncia e queremos entender melhor o que aconteceu.')+'</td>' +
+            '<td>'+(r.target_name?'<b>'+esc(r.target_name)+'</b><small>'+esc(r.target_phone||'')+'</small>'+wa(r.target_phone,'Olá, '+r.target_name+'! Aqui é do Resolvo Já. Recebemos uma reclamação sobre um serviço e gostaríamos de ouvir a sua versão.'):'<small>não informado</small>')+'<small>'+esc(r.request_title||'')+'</small></td>' +
+            '<td style="max-width:280px">'+esc(r.reason)+(r.resolution?'<small>Decisão: '+esc(r.resolution)+'</small>':'')+'</td><td class="num">'+esc(when(r.created_at))+'</td><td>'+pill(STATUS_REPORT,r.status)+'</td><td>' +
+            (act ? '<div class="resolve"><input id="rn-'+esc(r.id)+'" placeholder="Explique a decisão" aria-label="Explicação da decisão"><div class="acts">' +
+              (r.status==='open' ? '<button class="btn ghost" data-rep="'+esc(r.id)+'" data-to="reviewing">Em análise</button>' : '') +
+              '<button class="btn" data-rep="'+esc(r.id)+'" data-to="actioned">Resolvida</button><button class="btn ghost" data-rep="'+esc(r.id)+'" data-to="dismissed">Arquivar</button></div></div>' : '') +
+            '</td></tr>';
+        }).join('') + '</tbody></table></div>' : empty('Nenhuma denúncia','Quando alguém denunciar um pedido ou usuário pelo app, aparece aqui.');
+    } else if(state.tab==='cadastros'){
       var list = state.pros.slice().sort(function(a,b){ return (a.status==='pending'?0:1)-(b.status==='pending'?0:1); });
       h = '<h2>Cadastros de profissionais</h2><p class="sub">Aprove só depois de conferir o documento. Sem o aceite do termo, o banco não deixa aprovar.</p>';
       h += list.length ? '<div class="tw"><table><thead><tr><th>Profissional</th><th>Categorias</th><th>Experiência</th><th>Termo</th><th>Documento</th><th>Enviado</th><th>Status</th><th>Ação</th></tr></thead><tbody>' +
@@ -365,6 +433,23 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
         var id=b.getAttribute('data-disp'), note=document.getElementById('n-'+id).value.trim();
         if(!note){ toast('Explique a decisão antes de continuar.', true); document.getElementById('n-'+id).focus(); return; }
         b.disabled=true; run(api.resolve(id, document.getElementById('o-'+id).value, note), 'Disputa decidida');
+      });
+    });
+    var fc = v.querySelector('#addCat');
+    if(fc) fc.addEventListener('submit', function(ev){ ev.preventDefault(); var n=document.getElementById('catName').value.trim();
+      if(n.length<3){ toast('Digite o nome da categoria (mínimo de 3 letras).', true); return; } run(api.addCat(n), 'Categoria adicionada'); });
+    var fr = v.querySelector('#addReg');
+    if(fr) fr.addEventListener('submit', function(ev){ ev.preventDefault(); var c=document.getElementById('regCity').value.trim(), n=document.getElementById('regName').value.trim();
+      if(c.length<2||n.length<2){ toast('Preencha a cidade e o bairro.', true); return; } run(api.addReg(c,n), 'Bairro adicionado'); });
+    Array.prototype.forEach.call(v.querySelectorAll('[data-tg]'), function(b){
+      b.addEventListener('click', function(){ var on=b.getAttribute('data-on')==='1'; b.disabled=true;
+        run(api.toggle(b.getAttribute('data-tg'), +b.getAttribute('data-id'), on), on?'Ativado':'Desativado'); });
+    });
+    Array.prototype.forEach.call(v.querySelectorAll('[data-rep]'), function(b){
+      b.addEventListener('click', function(){
+        var id=b.getAttribute('data-rep'), to=b.getAttribute('data-to'), note=document.getElementById('rn-'+id).value.trim();
+        if(to!=='reviewing' && note.length<3){ toast('Explique a decisão antes de continuar.', true); document.getElementById('rn-'+id).focus(); return; }
+        b.disabled=true; run(api.report(id,to,note), to==='reviewing'?'Denúncia em análise':'Denúncia atualizada');
       });
     });
     Array.prototype.forEach.call(v.querySelectorAll('[data-pay]'), function(b){

@@ -105,7 +105,7 @@ async function mp(path, token, { method = "GET", body, idem } = {}) {
   });
   const text = await r.text();
   let data = null; try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
-  return { ok: r.ok, status: r.status, data };
+  return { ok: r.ok, status: r.status, data, reqId: r.headers.get("x-request-id") || null };
 }
 async function oauthToken(env, params) {
   const r = await fetch(MP_API + "/oauth/token", {
@@ -239,7 +239,7 @@ async function pay(request, env) {
   }
   const res = await mp("/v1/payments", token, { method: "POST", body, idem });
   if (!res.ok || !res.data || !res.data.id) {
-    console.error("Mercado Pago recusou a criação do pagamento:", res.status, JSON.stringify(res.data && (res.data.message || res.data.error)).slice(0, 200));
+    console.error("Mercado Pago recusou a criação do pagamento:", res.status, JSON.stringify(res.data && (res.data.message || res.data.error)).slice(0, 200), "| request-id:", res.reqId, "| método:", method, "| campos enviados:", Object.keys(body).join(","), "| causas:", JSON.stringify(res.data && res.data.cause).slice(0, 300));
     return json(502, { error: "Não foi possível processar o pagamento agora. Tente de novo em instantes." });
   }
   const m = res.data, ref = String(m.id), td = m.point_of_interaction && m.point_of_interaction.transaction_data;

@@ -190,10 +190,10 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
     <h1>Descreva o serviço. Receba propostas. Contrate com segurança.</h1>
     <p class="lead">O Resolvo Já conecta moradores da Grande Vitória a eletricistas, encanadores e montadores que atendem perto de casa. Você compara preço, avaliação e horário antes de decidir.</p>
     <div class="cta">
-     <a class="btn sun" href="#cadastro" data-pick="cliente">Quero contratar</a>
-     <a class="btn line" href="#cadastro" data-pick="pro">Sou profissional</a>
+     <a class="btn sun" href="/app/#/?modo=cadastro">Quero contratar</a>
+     <a class="btn line" href="/app/#/?modo=cadastro">Sou profissional</a>
     </div>
-    <p class="fine">Piloto em preparação na Grande Vitória. Entre na lista para ser avisado quando abrir na sua região. Já recebeu acesso? <a href="/app/">Abrir o app</a>.</p>
+    <p class="fine">Piloto aberto na Grande Vitória. Criar conta é grátis. Já tem conta? <a href="/app/">Entrar</a>. Mora em outra cidade? <a href="#cadastro">Entre na lista de espera</a>.</p>
    </div>
    <div class="demo" aria-label="Exemplo de pedido e propostas">
     <div class="req"><small>Pedido enviado há 8 minutos · Laranjeiras, Serra</small><b>Montar guarda-roupa de 6 portas</b></div>
@@ -238,7 +238,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
    <div class="mrow"><span>Serviço de montagem</span><b>R$ 180,00</b></div>
    <div class="mrow"><span>Comissão do Resolvo Já (10%)</span><b>− R$ 18,00</b></div>
    <div class="mrow total"><span>Você recebe</span><b>R$ 162,00</b></div>
-   <small>A comissão é cobrada só quando o serviço é contratado e pago pelo app. Entrar na lista é grátis. Exemplo para ilustrar o cálculo.</small>
+   <small>A comissão é cobrada só quando o serviço é contratado e pago pelo app. Criar conta é grátis. Exemplo para ilustrar o cálculo.</small>
    <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line)"><b style="display:block;font-size:18px">Profissional verificado</b><p style="color:var(--muted);margin:4px 0 12px;font-size:15.5px">Taxa única de <b>R$ 29,90</b>, opcional, para conferirmos seus dados e liberarmos o selo no app. Você tem 7 dias para desistir e receber o reembolso. A taxa não garante pedidos.</p><a class="btn" href="/pagar.html" style="width:100%">Quero ser verificado</a></div>
   </div>
  </div>
@@ -246,16 +246,21 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
 
 <section id="onde">
  <div class="wrap">
-  <div class="sec-h"><h2>Começamos na Grande Vitória. Em breve, no seu bairro.</h2><p>Os pedidos já estão abertos nestas cidades. Mora em outro lugar? Entre na lista: avisamos assim que chegarmos na sua cidade.</p></div>
+  <div class="sec-h"><h2>Começamos na Grande Vitória. Em breve, no seu bairro.</h2><p>Os pedidos já estão abertos nestas cidades. Mora em outro lugar? Entre na lista de espera: avisamos assim que chegarmos na sua cidade.</p></div>
   <div class="places" aria-label="Cidades com atendimento">
-   <span class="place on">Serra</span><span class="place on">Vitória</span><span class="place on">Vila Velha</span><span class="place on">Cariacica</span><span class="place on">Viana</span><span class="place on">Guarapari</span><span class="place">Sua cidade · entre na lista</span>
+   <span class="place on">Serra</span><span class="place on">Vitória</span><span class="place on">Vila Velha</span><span class="place on">Cariacica</span><span class="place on">Viana</span><span class="place on">Guarapari</span><a class="place" href="#cadastro" style="text-decoration:none">Sua cidade · lista de espera</a>
   </div>
  </div>
 </section>
 
 <section class="alt" id="cadastro">
  <div class="wrap">
-  <div class="sec-h" style="margin-inline:auto;text-align:center"><h2>Entre na lista do piloto</h2><p>Deixe seus dados e avisamos quando o Resolvo Já abrir na sua região.</p></div>
+  <div class="sec-h" style="margin-inline:auto;text-align:center"><h2>Crie sua conta e comece agora</h2><p>O Resolvo Já já está aberto na Grande Vitória. Cliente ou profissional, o cadastro leva poucos minutos e é grátis.</p></div>
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:0 0 56px">
+   <a class="btn" href="/app/#/?modo=cadastro">Criar conta grátis</a>
+   <a class="btn line" href="/app/">Já tenho conta · Entrar</a>
+  </div>
+  <div class="sec-h" style="margin-inline:auto;text-align:center"><h2>Mora em outra cidade?</h2><p>Entre na lista de espera e avisamos pelo WhatsApp quando o Resolvo Já chegar na sua região.</p></div>
   <div class="form-card">
    <div class="seg" role="tablist" aria-label="Tipo de cadastro">
     <button type="button" role="tab" id="tab-cliente" aria-selected="true" data-kind="cliente">Quero contratar</button>
@@ -295,11 +300,11 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
      <div class="full" id="box-exp" hidden><label class="l" for="exp">Há quanto tempo trabalha na área?</label>
       <select id="exp"><option>Menos de 1 ano</option><option>1 a 3 anos</option><option selected>3 a 10 anos</option><option>Mais de 10 anos</option></select></div>
      <div class="full"><label class="l" for="obs">Quer contar mais? (opcional)</label><textarea id="obs" placeholder="Ex.: preciso de montagem de móveis todo mês"></textarea></div>
-     <div class="full"><label class="chk" for="lgpd"><input id="lgpd" type="checkbox"><span>Autorizo o Resolvo Já a usar meus dados só para me avisar sobre o piloto, conforme a LGPD. Leia a <a href="/privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>. Posso pedir a exclusão a qualquer momento.</span></label></div>
+     <div class="full"><label class="chk" for="lgpd"><input id="lgpd" type="checkbox"><span>Autorizo o Resolvo Já a usar meus dados só para me avisar quando chegar na minha região, conforme a LGPD. Leia a <a href="/privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>. Posso pedir a exclusão a qualquer momento.</span></label></div>
     </div>
     <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true"><label>Não preencha este campo<input type="text" id="website" tabindex="-1" autocomplete="off"></label></div>
     <div id="cf-turnstile" style="margin-top:18px"></div>
-    <div style="margin-top:22px"><button class="btn" type="submit" id="send" style="width:100%">Entrar na lista</button></div>
+    <div style="margin-top:22px"><button class="btn" type="submit" id="send" style="width:100%">Entrar na lista de espera</button></div>
     <div id="out" role="status" aria-live="polite"></div>
    </form>
   </div>
@@ -311,13 +316,13 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
  <div class="wrap">
   <div class="sec-h" style="margin-inline:auto;text-align:center"><h2>Perguntas frequentes</h2><p>O que a maioria quer saber antes de entrar.</p></div>
   <div class="faq">
-   <details><summary>Quanto custa para quem contrata?</summary><p>Entrar na lista e pedir propostas não custa nada. Você paga apenas o serviço que decidir contratar, pelo aplicativo.</p></details>
-   <details><summary>Quanto custa para o profissional?</summary><p>Entrar na lista é grátis. Quando o app abrir, o Resolvo Já fica com 10% de cada serviço contratado e pago pelo app, e você recebe o resto. A verificação do perfil é opcional e custa R$ 29,90, uma única vez.</p></details>
-   <details><summary>O que é a verificação de profissional?</summary><p>Conferimos seus dados cadastrais e, quando o app estiver disponível, você recebe o selo "Profissional verificado". Ela ajuda a passar confiança, mas não garante a quantidade de pedidos.</p></details>
+   <details><summary>Quanto custa para quem contrata?</summary><p>Criar conta e pedir propostas não custa nada. Você paga apenas o serviço que decidir contratar, pelo aplicativo.</p></details>
+   <details><summary>Quanto custa para o profissional?</summary><p>Criar conta é grátis. O Resolvo Já fica com 10% de cada serviço contratado e pago pelo app, e você recebe o resto. A verificação do perfil é opcional e custa R$ 29,90, uma única vez.</p></details>
+   <details><summary>O que é a verificação de profissional?</summary><p>Conferimos seus dados cadastrais e você recebe o selo "Profissional verificado". Ela ajuda a passar confiança, mas não garante a quantidade de pedidos.</p></details>
    <details><summary>Posso pedir o dinheiro de volta?</summary><p>Sim. Você tem 7 dias corridos depois do pagamento para desistir e receber o reembolso integral. Veja os <a href="/termos.html">Termos e reembolso</a>.</p></details>
-   <details><summary>Quando o aplicativo abre?</summary><p>O piloto começa na Grande Vitória (Serra, Vitória, Vila Velha, Cariacica, Viana e Guarapari). Quem está na lista é avisado pelo WhatsApp antes de todo mundo.</p></details>
-   <details><summary>Meus dados estão seguros?</summary><p>Usamos seus dados só para falar sobre o piloto e você pode pedir a exclusão quando quiser. Pagamentos são feitos no Mercado Pago, e não guardamos dados de cartão. Leia a <a href="/privacidade.html">Política de Privacidade</a>.</p></details>
-   <details><summary>Onde vocês atendem?</summary><p>Começamos na Grande Vitória, ES (Serra, Vitória, Vila Velha, Cariacica, Viana e Guarapari). Você pode entrar na lista de qualquer cidade do Brasil: abrimos uma região nova assim que houver profissionais disponíveis nela.</p></details>
+   <details><summary>O aplicativo já está aberto?</summary><p>Sim, o piloto está aberto na Grande Vitória (Serra, Vitória, Vila Velha, Cariacica, Viana e Guarapari). Crie sua conta em <a href="/app/#/?modo=cadastro">resolvoja.app.br/app</a>. Quem mora em outra cidade pode entrar na lista de espera e será avisado pelo WhatsApp.</p></details>
+   <details><summary>Meus dados estão seguros?</summary><p>Usamos seus dados só para o funcionamento do serviço e, na lista de espera, para avisar quando chegarmos na sua cidade. Você pode pedir a exclusão quando quiser. Pagamentos são feitos no Mercado Pago, e não guardamos dados de cartão. Leia a <a href="/privacidade.html">Política de Privacidade</a>.</p></details>
+   <details><summary>Onde vocês atendem?</summary><p>Começamos na Grande Vitória, ES (Serra, Vitória, Vila Velha, Cariacica, Viana e Guarapari). Você pode entrar na lista de espera de qualquer cidade do Brasil: abrimos uma região nova assim que houver profissionais disponíveis nela.</p></details>
   </div>
  </div>
 </section>
@@ -338,7 +343,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
     $('box-cli').hidden=k!=='cliente';
     $('box-pro').hidden=k!=='pro';
     $('box-exp').hidden=k!=='pro';
-    $('send').textContent=k==='pro'?'Cadastrar como profissional':'Entrar na lista';
+    $('send').textContent=k==='pro'?'Entrar na lista de espera (profissional)':'Entrar na lista de espera';
     $('obs').placeholder=k==='pro'?'Ex.: atendo à noite e aos sábados':'Ex.: preciso de montagem de móveis todo mês';
   }
   document.querySelectorAll('[data-kind]').forEach(function(b){b.addEventListener('click',function(){setKind(b.dataset.kind)})});

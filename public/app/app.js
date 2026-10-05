@@ -89,8 +89,16 @@
     app.innerHTML = top + '<div class="pad">' + inner + '</div><nav class="bottom"><div class="in">' + nav + "</div></nav>";
     try { window.scrollTo(0, 0); } catch (x) {}
   }
+  // No navegador, o logo volta ao site. No app instalado na tela inicial, fica só o nome (sem link).
+  function logoHtml() {
+    var instalado = false;
+    try { instalado = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true; } catch (x) {}
+    return instalado
+      ? '<span class="logo">Resolvo <b>Já</b></span>'
+      : '<a class="logo" href="/" aria-label="Voltar ao site do Resolvo Já" style="text-decoration:none">Resolvo <b>Já</b></a>';
+  }
   function plain(inner, heroTitle, heroSub) {
-    app.innerHTML = '<div class="hero"><div class="hrow"><span class="logo">Resolvo <b>Já</b></span></div>' + (heroTitle ? "<h1>" + e(heroTitle) + "</h1>" + (heroSub ? '<p class="sub">' + e(heroSub) + "</p>" : "") : "") + '</div><div class="authbox">' + inner + "</div>";
+    app.innerHTML = '<div class="hero"><div class="hrow">' + logoHtml() + '</div>' + (heroTitle ? "<h1>" + e(heroTitle) + "</h1>" + (heroSub ? '<p class="sub">' + e(heroSub) + "</p>" : "") : "") + '</div><div class="authbox">' + inner + "</div>";
   }
   function loading() { app.innerHTML = '<p class="boot">Carregando…</p>'; }
 

@@ -97,10 +97,10 @@ async function userFrom(request, env) {
 }
 
 // ---------- Mercado Pago ----------
-async function mp(path, token, { method = "GET", body, idem } = {}) {
+async function mp(path, token, { method = "GET", body, idem, headers } = {}) {
   const r = await fetch(MP_API + path, {
     method,
-    headers: { Authorization: "Bearer " + token, "Content-Type": "application/json", ...(idem ? { "X-Idempotency-Key": idem } : {}) },
+    headers: { Authorization: "Bearer " + token, "Content-Type": "application/json", ...(idem ? { "X-Idempotency-Key": idem } : {}), ...(headers || {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const text = await r.text();
@@ -202,7 +202,8 @@ async function pay(request, env) {
     const inst = Number(b.installments || 1);
     if (typeof b.token !== "string" || b.token.length < 8 || b.token.length > 200 || typeof b.payment_method_id !== "string" || !/^[a-z0-9_]{2,30}$/i.test(b.payment_method_id) || !Number.isInteger(inst) || inst < 1 || inst > 12)
       return json(400, { error: "Dados do cartão inválidos." });
-    card = { token: b.token, payment_method_id: b.payment_method_id, installments: inst, issuer_id: b.issuer_id ? String(b.issuer_id).slice(0, 20) : undefined,
+    const dev = typeof b.device_id === "string" && /^[A-Za-z0-9_.:-]{8,200}$/.test(b.device_id) ? b.device_id : null;
+    card = { device: dev, token: b.token, payment_method_id: b.payment_method_id, installments: inst, issuer_id: b.issuer_id ? String(b.issuer_id).slice(0, 20) : undefined,
       ident: b.identification && typeof b.identification === "object" ? { type: String(b.identification.type || "").slice(0, 10), number: String(b.identification.number || "").replace(/\D/g, "").slice(0, 20) } : null };
   }
   const d = await loadRequest(env, requestId);
@@ -226,7 +227,9 @@ async function pay(request, env) {
     transaction_amount: money(cents), application_fee: money(fee), description: ("Resolvo Já: " + d.r.title).slice(0, 200),
     external_reference: requestId, statement_descriptor: "RESOLVOJA", notification_url: origin(env) + "/api/mp-split-webhook",
     payer: { email: u.email },
+    additional_info: { items: [{ id: requestId, title: String(d.r.title || "Serviço").slice(0, 100), description: ("Resolvo Já: " + (d.r.title || "serviço")).slice(0, 200), category_id: "services", quantity: 1, unit_price: money(cents) }] },
   };
+  if (env.MP_DIAG_SEM_COMISSAO === "1") delete base.application_fee; // SÓ PARA DIAGNÓSTICO: remover o secret depois do teste
   let body, idem;
   if (method === "pix") {
     body = { ...base, payment_method_id: "pix", date_of_expiration: new Date(Date.now() + 3600 * 1000).toISOString().replace("Z", "+00:00") };
@@ -237,7 +240,7 @@ async function pay(request, env) {
     if (card.ident && card.ident.number) body.payer = { email: u.email, identification: card.ident };
     idem = `rj-${requestId}-card-${card.token}`;
   }
-  const res = await mp("/v1/payments", token, { method: "POST", body, idem });
+  const res = await mp("/v1/payments", token, { method: "POST", body, idem, headers: card && card.device ? { "X-meli-session-id": card.device } : undefined });
   if (!res.ok || !res.data || !res.data.id) {
     console.error("Mercado Pago recusou a criação do pagamento:", res.status, JSON.stringify(res.data && (res.data.message || res.data.error)).slice(0, 200), "| request-id:", res.reqId, "| método:", method, "| campos enviados:", Object.keys(body).join(","), "| causas:", JSON.stringify(res.data && res.data.cause).slice(0, 300));
     return json(502, { error: "Não foi possível processar o pagamento agora. Tente de novo em instantes." });
@@ -253,6 +256,7 @@ async function pay(request, env) {
     return json(409, { error: "Não foi possível registrar o pagamento. Nada foi cobrado." });
   }
   const applied = await rpc(env, "server_apply_payment", { p_ref: ref, p_mp_status: m.status || "pending" });
+  if (m.status === "rejected") console.error("Pagamento recusado pelo Mercado Pago:", m.status_detail, "| request-id:", res.reqId, "| método:", method, "| device-id:", card && card.device ? "enviado" : "ausente");
   if (m.status === "rejected") return json(200, { ok: false, status: "rejected", error: motivo(m.status_detail) });
   return json(200, { ok: true, status: m.status, request_status: applied && applied.request_status,
     ...(method === "pix" ? { pix: { code: td ? td.qr_code : null, qr_base64: td ? td.qr_code_base64 : null, expires_at: expires } } : {}) });

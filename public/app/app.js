@@ -546,7 +546,9 @@
     }
     if ((q.status === "open" && props.length) || q.status === "awaiting_payment" || q.status === "hired") html += chatBlock(id);
     if (q.status === "open" || q.status === "awaiting_payment") html += '<button class="danger full" id="can" type="button">Cancelar pedido</button>';
+    if (accepted && q.status !== "cancelled") html += reportHtml();
     shell(html, "pedidos", topbar("Pedido", "#/pedidos"));
+    if (accepted) reportBind(id, accepted.pro_id);
     Array.prototype.forEach.call(document.querySelectorAll("[data-acc]"), function (b) {
       b.onclick = async function () {
         if (!confirm("Aceitar esta proposta? As outras serão recusadas.")) return;
@@ -675,6 +677,22 @@
     };
   }
 
+  // Denunciar: abre um registro para a equipe analisar (aparece na aba Denúncias do painel).
+  function reportHtml() { return '<p class="center small" style="margin-top:18px"><button class="ghost" id="rep" type="button">Denunciar um problema neste pedido</button></p>'; }
+  function reportBind(requestId, targetId) {
+    var b = $("rep"); if (!b) return;
+    b.onclick = async function () {
+      var why = prompt("Conte o que aconteceu. A equipe do Resolvo Já vai analisar e entrar em contato:");
+      if (why === null) return;
+      why = why.trim();
+      if (why.length < 10) { toast("Descreva melhor (mínimo de 10 letras)."); return; }
+      b.disabled = true;
+      var x = await sb.from("reports").insert({ reporter_id: user.id, target_user_id: targetId || null, request_id: requestId, reason: why.slice(0, 1000) });
+      b.disabled = false;
+      if (x.error) toast(/limite/i.test(x.error.message) ? x.error.message : friendly(x.error)); else toast("Denúncia enviada. Obrigado por avisar.");
+    };
+  }
+
   // Cartão "Conectar Mercado Pago" do profissional.
   async function mpConnectHtml() {
     var c = await sb.rpc("my_mp_connected");
@@ -766,7 +784,9 @@
         '<label for="msg">Mensagem (opcional)</label><textarea id="msg" maxlength="500" placeholder="Explique o que está incluso no valor."></textarea>' +
         '<div id="err"></div><button class="full" id="go" type="submit">Enviar proposta</button></form>';
     } else html += '<div class="empty">Este pedido não está mais aberto.</div>';
+    if (mine && mine.status === "accepted") html += reportHtml();
     shell(html, mine ? "propostas" : "home", topbar("Pedido", mine ? "#/propostas" : "#/"));
+    if (mine && mine.status === "accepted") reportBind(id, q.client_id);
     if ($("val")) $("val").oninput = function () { var c = parseBrl($("val").value); $("liq").textContent = isNaN(c) ? "" : "Você recebe " + brl(Math.round(c * 0.9)) + " (valor menos a comissão de 10%)."; };
     if ($("f")) $("f").onsubmit = async function (ev) {
       ev.preventDefault();

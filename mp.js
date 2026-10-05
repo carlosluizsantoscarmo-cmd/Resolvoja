@@ -197,6 +197,7 @@ async function pay(request, env) {
   const requestId = String(b.request_id || ""), method = b.method;
   if (!UUID.test(requestId) || (method !== "pix" && method !== "card")) return json(400, { error: "Pedido inválido." });
   if (!u.email) return json(422, { error: "A conta precisa ter e-mail para pagar." });
+  if (method === "card" && env.MP_CARTAO_ATIVO === "0") return json(403, { error: "Pagamento por cartão ainda não está disponível. Use o Pix." });
   let card = null;
   if (method === "card") {
     const inst = Number(b.installments || 1);
@@ -223,11 +224,18 @@ async function pay(request, env) {
   }
 
   const cents = d.p.amount_cents, fee = Math.round(cents * COMMISSION_BPS / 10000);
+  // Dados do comprador para o antifraude (additional_info.payer). Se a consulta falhar, segue sem eles.
+  let cli = null; try { const pr = await sb(env, `/rest/v1/profiles?id=eq.${u.id}&select=name,phone`); cli = pr && pr[0]; } catch { /* segue sem */ }
+  const nm = String((cli && cli.name) || "").trim().split(/\s+/).filter(Boolean), ph = String((cli && cli.phone) || "").replace(/\D/g, "");
+  const payerInfo = {};
+  if (nm[0]) payerInfo.first_name = nm[0].slice(0, 50);
+  if (nm.length > 1) payerInfo.last_name = nm.slice(1).join(" ").slice(0, 50);
+  if (ph.length >= 10) payerInfo.phone = { area_code: ph.slice(0, 2), number: ph.slice(2, 12) };
   const base = {
     transaction_amount: money(cents), application_fee: money(fee), description: ("Resolvo Já: " + d.r.title).slice(0, 200),
     external_reference: requestId, statement_descriptor: "RESOLVOJA", notification_url: origin(env) + "/api/mp-split-webhook",
     payer: { email: u.email },
-    additional_info: { items: [{ id: requestId, title: String(d.r.title || "Serviço").slice(0, 100), description: ("Resolvo Já: " + (d.r.title || "serviço")).slice(0, 200), category_id: "services", quantity: 1, unit_price: money(cents) }] },
+    additional_info: { payer: payerInfo, items: [{ id: requestId, title: String(d.r.title || "Serviço").slice(0, 100), description: ("Resolvo Já: " + (d.r.title || "serviço")).slice(0, 200), category_id: "services", quantity: 1, unit_price: money(cents) }] },
   };
   if (env.MP_DIAG_SEM_COMISSAO === "1") delete base.application_fee; // SÓ PARA DIAGNÓSTICO: remover o secret depois do teste
   let body, idem;
@@ -387,7 +395,7 @@ async function refund(request, env) {
 
 export async function mpHandle(request, env) {
   const { pathname } = new URL(request.url);
-  if (pathname === "/api/mp/config") return request.method === "GET" ? json(200, { public_key: env.MP_PUBLIC_KEY || null }) : json(405, { error: "Método não permitido." });
+  if (pathname === "/api/mp/config") return request.method === "GET" ? json(200, { public_key: env.MP_PUBLIC_KEY || null, card_enabled: env.MP_CARTAO_ATIVO !== "0" }) : json(405, { error: "Método não permitido." });
   if (!configured(env)) return json(503, { error: "Pagamento ainda não configurado." });
   const post = (fn) => (request.method === "POST" ? fn(request, env) : json(405, { error: "Método não permitido." }, { Allow: "POST" }));
   try {

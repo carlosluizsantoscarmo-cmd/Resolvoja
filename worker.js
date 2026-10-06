@@ -106,7 +106,7 @@ async function leadPost({ request, env, ctx }) {
     notifyOwner(env, ctx, `Novo cadastro: ${tipo === "pro" ? "profissional" : "cliente"} - ${nome}`,
       `Tipo: ${tipo === "pro" ? "profissional" : "cliente"}\nNome: ${nome}\nWhatsApp: ${whatsapp}\nLocal: ${bairro}, ${cidade}/${uf}` +
       (categorias.length ? `\nCategorias: ${categorias.join(", ")}` : "") + (rec.obs ? `\nObs.: ${rec.obs}` : "") +
-      "\n\nVeja todos em /admin.html");
+      "\n\nVeja todos em https://resolvoja.app.br/equipe/ (aba Lista de espera)");
   }
   return json(200, { ok: true });
 }
@@ -120,11 +120,30 @@ async function leadOther({ request }) {
 // ?format=csv devolve uma planilha. DELETE /api/leads?key=lead:... remove um cadastro (pedido de exclusão pela LGPD).
 
 // Devolve "ok", "bad" (senha errada) ou um texto explicando por que o servidor não está configurado.
+// Aceita duas formas de entrar: o login do app (conta com papel "admin", usado no painel /equipe/)
+// ou a senha antiga ADMIN_TOKEN (continua funcionando, se existir).
+async function supabaseAdmin(token, env) {
+  if (!(env.SUPABASE_URL && env.SUPABASE_ANON_KEY && env.SUPABASE_SERVICE_ROLE_KEY)) return false;
+  if (token.split(".").length !== 3) return false; // não parece um login do app
+  try {
+    const base = env.SUPABASE_URL.replace(/\/$/, "");
+    const ur = await fetch(base + "/auth/v1/user", { headers: { apikey: env.SUPABASE_ANON_KEY, Authorization: "Bearer " + token } });
+    if (!ur.ok) return false;
+    const u = await ur.json();
+    if (!u || !UUID.test(u.id || "")) return false;
+    const pr = await fetch(base + "/rest/v1/profiles?id=eq." + u.id + "&select=role", { headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: "Bearer " + env.SUPABASE_SERVICE_ROLE_KEY } });
+    if (!pr.ok) return false;
+    const rows = await pr.json();
+    return Array.isArray(rows) && rows[0] && rows[0].role === "admin";
+  } catch { return false; }
+}
 async function authorized(request, env) {
-  if (!env.ADMIN_TOKEN) return { unconfigured: "A senha da equipe (ADMIN_TOKEN) não está configurada neste servidor." };
-  if (env.ADMIN_TOKEN.length < 16) return { unconfigured: "A senha da equipe (ADMIN_TOKEN) tem menos de 16 caracteres. Crie uma maior." };
   const h = request.headers.get("Authorization") || "";
   const token = h.startsWith("Bearer ") ? h.slice(7) : "";
+  if (token && (await supabaseAdmin(token, env))) return "ok";
+  if (!env.ADMIN_TOKEN && !env.SUPABASE_SERVICE_ROLE_KEY) return { unconfigured: "A senha da equipe (ADMIN_TOKEN) não está configurada neste servidor." };
+  if (!env.ADMIN_TOKEN) return "bad";
+  if (env.ADMIN_TOKEN.length < 16) return { unconfigured: "A senha da equipe (ADMIN_TOKEN) tem menos de 16 caracteres. Crie uma maior." };
   return (await tokenMatches(token, env.ADMIN_TOKEN)) ? "ok" : "bad";
 }
 const deny = (a) => (a.unconfigured ? json(503, { error: a.unconfigured }) : json(401, { error: "Não autorizado." }));

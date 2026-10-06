@@ -97,6 +97,17 @@
       ? '<span class="logo">Resolvo <b>Já</b></span>'
       : '<a class="logo" href="/" aria-label="Voltar ao site do Resolvo Já" style="text-decoration:none">Resolvo <b>Já</b></a>';
   }
+  // ---------- suporte ----------
+  var SUP_WA = "5527996133207", SUP_MAIL = "contato@resolvoja.app.br";
+  function supLink(msg) { return "https://wa.me/" + SUP_WA + "?text=" + encodeURIComponent(msg); }
+  function supportCard() {
+    return '<div class="card"><b>Precisa de ajuda?</b><p class="muted small" style="margin:6px 0 12px">Fale com a equipe do Resolvo Já. Respondemos o mais rápido que der.</p>' +
+      '<a class="btn full" href="' + supLink("Olá! Preciso de ajuda com o Resolvo Já.") + '" target="_blank" rel="noopener" style="text-decoration:none;text-align:center">Falar pelo WhatsApp</a>' +
+      '<p class="small center muted" style="margin:10px 0 0">ou escreva para <a href="mailto:' + SUP_MAIL + '">' + SUP_MAIL + "</a></p></div>";
+  }
+  function supportLine(msg) {
+    return '<p class="small center muted" style="margin:12px 0 0">Problema com o pagamento? <a href="' + supLink(msg) + '" target="_blank" rel="noopener">Fale com a gente</a>.</p>';
+  }
   function plain(inner, heroTitle, heroSub) {
     app.innerHTML = '<div class="hero"><div class="hrow">' + logoHtml() + '</div>' + (heroTitle ? "<h1>" + e(heroTitle) + "</h1>" + (heroSub ? '<p class="sub">' + e(heroSub) + "</p>" : "") : "") + '</div><div class="authbox">' + inner + "</div>";
   }
@@ -365,7 +376,7 @@
     var mpHtml = isPro && pro && pro.status === "approved" ? await mpConnectHtml() : "";
     shell('<div class="card"><div class="row" style="justify-content:flex-start;gap:14px">' + avatar(profile.name, 0) + '<div><b>' + e(profile.name) + '</b><br><span class="muted small">' + e(user.email || "") + "<br>" + e(profile.phone || "") + "</span></div></div>" +
       '<p style="margin:12px 0 0">' + (isPro ? "Profissional " + (pro && pro.status === "approved" ? '<span class="pill ok">aprovado</span>' : pro && pro.status === "suspended" ? '<span class="pill err">suspenso</span>' : '<span class="pill warn">em análise</span>') : "Cliente") + "</p></div>" +
-      mpHtml + installBlock() +
+      mpHtml + supportCard() + installBlock() +
       '<p class="small center muted" style="margin-top:18px"><a href="/termos.html" target="_blank" rel="noopener">Termos</a> · <a href="/privacidade.html" target="_blank" rel="noopener">Privacidade</a></p>' +
       '<button class="danger full" id="out" type="button">Sair da conta</button>', "perfil", topbar("Perfil"));
     $("out").onclick = signOut; bindInstall(); mpConnectBind();
@@ -625,7 +636,7 @@
   function payHtml(amount) {
     return '<h2>Pagamento</h2><div class="card" id="paycard"><div class="row"><span>Valor do serviço</span><span class="price">' + brl(amount) + '</span></div>' +
       '<p class="muted small" style="margin:8px 0 12px">Pagamento seguro pelo Mercado Pago. O valor só é repassado ao profissional depois que você confirmar o serviço.</p><p class="muted small" style="margin:0 0 12px"><b>Para pagar com cartão, use um cartão no seu nome.</b> Cartão de outra pessoa pode ser recusado por segurança. Se for o caso, use o Pix.</p>' +
-      '<div id="payerr"></div><div class="chips" id="pm"><button type="button" class="full" id="pix">Pagar com Pix</button><button type="button" class="ghost full" id="crd">Pagar com cartão</button></div><div id="paybody"></div></div>';
+      '<div id="payerr"></div><div class="chips" id="pm"><button type="button" class="full" id="pix">Pagar com Pix</button><button type="button" class="ghost full" id="crd">Pagar com cartão</button></div><div id="paybody"></div>' + supportLine("Olá! Estou com problema para pagar meu pedido no Resolvo Já.") + "</div>";
   }
   function pixView(pix) {
     var img = pix.qr_base64 ? '<img alt="QR Code Pix" style="width:200px;height:200px;display:block;margin:12px auto" src="data:image/png;base64,' + e(pix.qr_base64) + '">' : "";
@@ -756,7 +767,7 @@
         });
     }
     if (pro.status === "pending") banner = '<div class="banner">Seu cadastro está em análise pela equipe. Assim que for aprovado, os pedidos da sua região aparecem aqui.</div>';
-    if (pro.status === "suspended") banner = '<div class="banner err">Seu cadastro está suspenso. Fale com o suporte do Resolvo Já.</div>';
+    if (pro.status === "suspended") banner = '<div class="banner err">Seu cadastro está suspenso. Fale com o suporte do Resolvo Já.</div>' + supportCard();
     if (pro.status !== "approved") return shell(banner, "home", proHead("Início"));
     var mpHtml = await mpConnectHtml();
     var mine = await sb.from("proposals").select("request_id").eq("pro_id", user.id);

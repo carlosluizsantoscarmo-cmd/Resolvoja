@@ -90,10 +90,11 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
   var CFG = window.RESOLVO_JA_CONFIG || {};
   var LIVE = !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
   var $app = document.getElementById('app');
-  var state = { tab:'visao', pros:[], reqs:[], disputes:[], payouts:[], negs:[], audit:[], cats:[], regs:[], reports:[], ov:null, user:null };
+  var state = { tab:'visao', pros:[], reqs:[], disputes:[], payouts:[], negs:[], audit:[], cats:[], regs:[], reports:[], ov:null, user:null, clients:[], leads:[], orders:[], extraErr:'' };
 
   /* ---------------------------------------------------------- utilidades */
   function esc(s){ var d=document.createElement('div'); d.textContent = s==null ? '' : String(s); return d.innerHTML; }
+  function escA(x){ return esc(x).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
   function money(c){ return (c/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
   function when(iso){ var d=new Date(iso); return isNaN(d) ? '' : d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }
   var STATUS_REQ = { open:['Aberto','info'], awaiting_payment:['Aguardando pagamento','warn'], hired:['Contratado','info'], completed:['Concluído','ok'], cancelled:['Cancelado','err'], disputed:['Em disputa','err'] };
@@ -145,8 +146,10 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
     api = {
       login:function(){ return Promise.resolve({name:'Equipe Resolvo Já (demonstração)'}); },
       logout:function(){ return Promise.resolve(); },
-      load:function(){ state.pros=demo.pros; state.reqs=demo.reqs; state.disputes=demo.disputes; state.payouts=demo.payouts; state.negs=demo.negs; state.cats=demo.cats; state.regs=demo.regs; state.reports=demo.reports; state.ov=demo.ov; return Promise.resolve(); },
+      load:function(){ state.pros=demo.pros; state.reqs=demo.reqs; state.disputes=demo.disputes; state.payouts=demo.payouts; state.negs=demo.negs; state.cats=demo.cats; state.regs=demo.regs; state.reports=demo.reports; state.ov=demo.ov; state.clients=[]; state.leads=[]; state.orders=[]; return Promise.resolve(); },
       docUrl:function(){ return Promise.reject(new Error('No modo demonstração não há documentos.')); },
+      delRemote:function(){ return Promise.resolve(); },
+      authHeader:function(){ return Promise.resolve({}); },
       markPaid:function(id){ demo.negs.forEach(function(n){ if(n.request_id===id) n.status='hired'; }); return Promise.resolve(); },
       setPro:function(id,status){ demo.pros.forEach(function(p){ if(p.user_id===id) p.status=status; }); return Promise.resolve(); },
       resolve:function(id,outcome){
@@ -217,8 +220,23 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
             state.reports = r[1].error ? [] : (r[1].data||[]); state.reportsErr = r[1].error ? r[1].error.message : '';
             state.cats = r[2].error ? [] : (r[2].data||[]); state.regs = r[3].error ? [] : (r[3].data||[]);
           });
-        });
+        }).then(function(){ return api.loadExtra(); });
       },
+      loadExtra:function(){
+        state.extraErr='';
+        return sb.auth.getSession().then(function(ses){
+          var tk = ses.data && ses.data.session && ses.data.session.access_token || '';
+          var H = {Authorization:'Bearer '+tk};
+          function get(u){ return fetch(u,{headers:H}).then(function(r){ if(!r.ok) throw new Error('falha '+r.status); return r.json(); }); }
+          return Promise.all([
+            sb.rpc('admin_clients').then(function(c){ state.clients = c.error ? [] : (c.data||[]); state.clientsErr = c.error ? c.error.message : ''; }),
+            get('/api/leads').then(function(d){ state.leads = d.items||[]; }).catch(function(){ state.leads=[]; state.extraErr='Não foi possível carregar a lista de espera.'; }),
+            get('/api/pedidos').then(function(d){ state.orders = d.items||[]; }).catch(function(){ state.orders=[]; state.extraErr='Não foi possível carregar os pagamentos do site.'; })
+          ]);
+        }).catch(function(){});
+      },
+      authHeader:function(){ return sb.auth.getSession().then(function(ses){ return {Authorization:'Bearer '+(ses.data&&ses.data.session&&ses.data.session.access_token||'')}; }); },
+      delRemote:function(url){ return api.authHeader().then(function(H){ return fetch(url,{method:'DELETE',headers:H}).then(function(r){ if(!r.ok) throw new Error('Não foi possível excluir.'); }); }); },
       docUrl:function(path){ return sb.storage.from('documentos').createSignedUrl(path,120).then(function(r){ if(r.error||!r.data) throw new Error('Não foi possível abrir o documento.'); return r.data.signedUrl; }); },
       markPaid:function(id){ return sb.rpc('admin_mark_paid',{p_request:id,p_method:'pix'}).then(need); },
       setPro:function(id,status){ return sb.rpc('set_pro_status',{p_pro:id,p_status:status}).then(need); },
@@ -280,7 +298,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
 
   function renderApp(){
     var c = counts();
-    var tabs = [['visao','Visão geral',null],['cadastros','Cadastros',c.cadastros],['negociacoes','Negociações',c.negs],['pedidos','Pedidos',null],['catreg','Categorias e regiões',null],['disputas','Disputas',c.disputas],['denuncias','Denúncias',c.denuncias],['saques','Saques',c.saques]];
+    var tabs = [['visao','Visão geral',null],['cadastros','Cadastros',c.cadastros],['negociacoes','Negociações',c.negs],['pedidos','Pedidos',null],['clientes','Clientes',null],['espera','Lista de espera',null],['pgsite','Pagamentos do site',null],['catreg','Categorias e regiões',null],['disputas','Disputas',c.disputas],['denuncias','Denúncias',c.denuncias],['saques','Saques',c.saques]];
     var open = state.payouts.filter(function(p){return p.status==='requested';}).reduce(function(a,p){return a+p.amount_cents;},0);
     $app.innerHTML =
       (LIVE ? '' : '<div class="demo">Modo demonstração: os dados são de exemplo e nada é salvo.</div>') +
@@ -397,6 +415,33 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
               '<input id="n-'+esc(d.id)+'" placeholder="Explique a decisão" aria-label="Explicação da decisão"><button class="btn" data-disp="'+esc(d.id)+'">Decidir</button></div>' : '') +
             '</td></tr>';
         }).join('') + '</tbody></table></div>' : empty('Nenhuma disputa','Quando um cliente ou profissional abrir uma disputa, ela aparece aqui.');
+    } else if(state.tab==='clientes'){
+      h = '<h2>Clientes cadastrados</h2><p class="sub">Quem criou conta como cliente no app (até 500, os mais recentes primeiro). Clientes não precisam de aprovação.</p>';
+      if(state.clientsErr) h += '<p class="sub" style="color:var(--err)">Não foi possível carregar: '+esc(state.clientsErr)+'. Confira se a migração 011 foi rodada no Supabase.</p>';
+      h += state.clients.length ? '<div class="tw"><table><thead><tr><th>Cliente</th><th>WhatsApp</th><th>E-mail</th><th>Cadastro</th><th>Pedidos</th></tr></thead><tbody>' +
+        state.clients.map(function(c){ return '<tr><td><b>'+esc(c.name)+'</b></td><td>'+esc(c.phone||'')+'</td><td>'+esc(c.email||'')+'</td><td class="num">'+esc(when(c.created_at))+'</td><td class="num">'+esc(c.orders_count)+'</td></tr>'; }).join('') +
+        '</tbody></table></div>' : (state.clientsErr ? '' : empty('Nenhum cliente ainda','Quem se cadastrar como cliente aparece aqui.'));
+    } else if(state.tab==='espera'){
+      h = '<h2>Lista de espera</h2><p class="sub">Pessoas que se cadastraram no site (principalmente de outras cidades). Para apagar um cadastro a pedido da pessoa (LGPD), use Excluir.</p>';
+      if(state.extraErr) h += '<p class="sub" style="color:var(--err)">'+esc(state.extraErr)+'</p>';
+      h += state.leads.length ? '<div class="tw"><table><thead><tr><th>Quando</th><th>Tipo</th><th>Nome</th><th>WhatsApp</th><th>Local</th><th>Detalhes</th><th></th></tr></thead><tbody>' +
+        state.leads.map(function(x){
+          return '<tr><td class="num">'+esc(when(x.criadoEm))+'</td><td>'+(x.tipo==='pro'?'Profissional':'Cliente')+'</td><td><b>'+esc(x.nome)+'</b></td><td>'+esc(x.whatsapp)+'</td>' +
+            '<td>'+esc((x.bairro||'')+', '+(x.cidade||'')+(x.uf?'/'+x.uf:''))+'</td><td>'+esc(((x.categorias||[]).join(', ')+(x.experiencia?' · '+x.experiencia:'')+(x.obs?' · '+x.obs:'')))+'</td>' +
+            '<td><button class="btn ghost" data-delurl="/api/leads?key='+encodeURIComponent(x.key)+'" data-ask="Excluir o cadastro de '+escA(x.nome)+'? Isso não pode ser desfeito.">Excluir</button></td></tr>';
+        }).join('') + '</tbody></table></div>' : empty('Lista de espera vazia','Os cadastros feitos no site aparecem aqui.');
+    } else if(state.tab==='pgsite'){
+      var STS={paid:'Pago',pending:'Pendente',in_process:'Em análise',rejected:'Recusado',cancelled:'Cancelado',refunded:'Reembolsado',charged_back:'Contestado'};
+      var pagos = state.orders.filter(function(o){return o.status==='paid';});
+      var soma = pagos.reduce(function(t,o){return t+o.totalCents;},0);
+      h = '<h2>Pagamentos do site</h2><p class="sub">Taxa de verificação do profissional (R$ 29,90) paga pelo site. '+state.orders.length+' pedido(s) · '+pagos.length+' pago(s) · '+esc(money(soma))+'</p>';
+      if(state.extraErr) h += '<p class="sub" style="color:var(--err)">'+esc(state.extraErr)+'</p>';
+      h += state.orders.length ? '<div class="tw"><table><thead><tr><th>Quando</th><th>Item</th><th>Nome</th><th>E-mail</th><th>Valor</th><th>Status</th><th>Pagamento MP</th><th></th></tr></thead><tbody>' +
+        state.orders.map(function(o){
+          var aviso = (o.status==='paid'?'ATENÇÃO: este pedido consta como PAGO. ':'')+'Excluir o pedido de '+o.nome+'? Isso não pode ser desfeito e não estorna o pagamento no Mercado Pago.';
+          return '<tr><td class="num">'+esc(when(o.criadoEm))+'</td><td>'+esc(o.item==='cadastro-pro'?'Verificação de profissional':o.item)+'</td><td><b>'+esc(o.nome)+'</b></td><td>'+esc(o.email)+'</td><td class="num">'+esc(money(o.totalCents))+'</td><td>'+esc(STS[o.status]||o.status)+'</td><td>'+esc(o.paymentId||'')+'</td>' +
+            '<td><button class="btn ghost" data-delurl="/api/pedidos?id='+encodeURIComponent(o.id)+'" data-ask="'+escA(aviso)+'">Excluir</button></td></tr>';
+        }).join('') + '</tbody></table></div>' : empty('Nenhum pagamento ainda','Os pagamentos feitos pelo site aparecem aqui.');
     } else {
       h = '<h2>Saques</h2><p class="sub">Faça o Pix para a chave informada e depois marque o saque como pago. Recusar devolve o valor ao saldo do profissional.</p>';
       h += state.payouts.length ? '<div class="tw"><table><thead><tr><th>Profissional</th><th>Valor</th><th>Chave Pix</th><th>Pedido em</th><th>Status</th><th>Ação</th></tr></thead><tbody>' +
@@ -416,6 +461,12 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       b.addEventListener('click', function(){
         if(!window.confirm('Você já recebeu o pagamento deste pedido? Isso libera o início do serviço e não pode ser desfeito aqui.')) return;
         b.disabled=true; run(api.markPaid(b.getAttribute('data-paid')), 'Pagamento registrado. Pedido em andamento.');
+      });
+    });
+    Array.prototype.forEach.call(v.querySelectorAll('[data-delurl]'), function(b){
+      b.addEventListener('click', function(){
+        if(!window.confirm(b.getAttribute('data-ask'))) return;
+        b.disabled=true; run(api.delRemote(b.getAttribute('data-delurl')), 'Excluído');
       });
     });
     Array.prototype.forEach.call(v.querySelectorAll('[data-doc]'), function(b){

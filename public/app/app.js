@@ -4,7 +4,7 @@
   "use strict";
   var CFG = window.RJ_APP || {};
   var app = document.getElementById("app");
-  var TERMS_VERSION = "2026-10-v1";
+  var TERMS_VERSION = "2026-10-v2";
   var sb = null, user = null, profile = null, pro = null, proReady = false;
   var cats = [], regions = [], timer = null, installEvt = null, recovering = false;
 

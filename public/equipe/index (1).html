@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Resolvo Já · Eletricista, encanador e montador perto de você</title>
+<link rel="canonical" href="https://resolvoja.app.br/">
+<meta name="description" content="Descreva o serviço, receba propostas de profissionais perto de você e contrate com segurança. Aberto em todo o Brasil. Crie sua conta grátis.">
+<meta property="og:title" content="Resolvo Já · Serviços perto de você">
+<meta property="og:description" content="Descreva o serviço, receba propostas e contrate com segurança. Aberto em todo o Brasil.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://resolvoja.app.br/">
+<meta property="og:image" content="https://resolvoja.app.br/og.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#1F3BD1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231F3BD1'/%3E%3Ctext x='32' y='44' font-size='34' font-weight='800' text-anchor='middle' fill='%23FFC400' font-family='Arial'%3ERJ%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: faixa azul de abertura com pedido + propostas lado a lado, depois seções claras em coluna única de leitura. */
+:root{
+  --bg:#F3F5FC;--surface:#FFFFFF;--text:#121A3A;--muted:#566080;--line:#D9DDEE;
+  --brand:#1F3BD1;--brand-ink:#FFFFFF;--sun:#FFC400;--sun-ink:#121A3A;--ok:#0E7A52;--ok-bg:#DDF3EA;--err:#A12626;--err-bg:#FBE3E3;--soft:#E3E8FB;
+  --hero:#1F3BD1;--hero-ink:#FFFFFF;--hero-mut:#CBD3FA;
+  --f-display:'Bricolage Grotesque','Trebuchet MS',system-ui,sans-serif;
+  --f-body:'Figtree',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1230;--surface:#151B3E;--text:#EEF0FA;--muted:#A3ABCF;--line:#283062;
+    --brand:#8FA2FF;--brand-ink:#0D1230;--ok:#6FD6A8;--ok-bg:#12382B;--err:#FF9B9B;--err-bg:#431B1B;--soft:#1F2757;
+    --hero:#16205F;--hero-ink:#FFFFFF;--hero-mut:#B6C0F2;color-scheme:dark}
+}
+:root[data-theme="dark"]{
+  --bg:#0D1230;--surface:#151B3E;--text:#EEF0FA;--muted:#A3ABCF;--line:#283062;
+  --brand:#8FA2FF;--brand-ink:#0D1230;--ok:#6FD6A8;--ok-bg:#12382B;--err:#FF9B9B;--err-bg:#431B1B;--soft:#1F2757;
+  --hero:#16205F;--hero-ink:#FFFFFF;--hero-mut:#B6C0F2;color-scheme:dark}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--f-body);font-size:17px;line-height:1.5;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--f-display);letter-spacing:-.02em;margin:0;text-wrap:balance}
+p{margin:0}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.wrap{width:100%;max-width:1080px;margin-inline:auto;padding-inline:20px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:14px;padding:14px 22px;font:700 17px var(--f-body);cursor:pointer;text-decoration:none;background:var(--brand);color:var(--brand-ink)}
+.btn.sun{background:var(--sun);color:var(--sun-ink)}
+.btn.line{background:transparent;color:inherit;border:1.5px solid currentColor}
+.btn[disabled]{opacity:.6;cursor:default}
+
+/* topo + abertura */
+.hero{background:var(--hero);color:var(--hero-ink)}
+.nav{display:flex;align-items:center;gap:16px;padding-block:18px;flex-wrap:wrap}
+.logo{font:800 26px var(--f-display);letter-spacing:-.02em;text-decoration:none;display:flex;gap:6px}
+.logo b{background:var(--sun);color:var(--sun-ink);padding:0 9px 3px;border-radius:12px 12px 12px 3px}
+.nav .sp{flex:1}
+.nav a.l{font-weight:600;text-decoration:none;color:var(--hero-mut)}
+.nav a.l:hover{color:var(--hero-ink)}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:44px;align-items:center;padding-block:34px 64px}
+.hero h1{font-size:clamp(38px,6vw,64px);line-height:1.02;font-weight:800}
+.hero .lead{margin-top:18px;font-size:19px;color:var(--hero-mut);max-width:34em}
+.cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+.hero .btn.line{color:var(--hero-ink)}
+.fine{margin-top:16px;font-size:14px;color:var(--hero-mut)}
+
+/* demonstração do pedido e das propostas */
+.demo{background:var(--surface);color:var(--text);border-radius:26px;padding:20px;box-shadow:0 24px 60px rgba(7,12,50,.35);min-width:0}
+.req{background:var(--bg);border-radius:16px;padding:14px 16px}
+.req small{color:var(--muted);font-size:13.5px}
+.req b{display:block;font:800 18px var(--f-display);margin-top:2px}
+.demo h3{font-size:15px;color:var(--muted);font-family:var(--f-body);font-weight:700;letter-spacing:0;margin:16px 2px 8px}
+.prop{display:flex;align-items:center;gap:12px;border:1.5px solid var(--line);border-radius:16px;padding:12px;margin-bottom:8px;min-width:0}
+.prop.best{border-color:var(--brand);box-shadow:0 0 0 3px var(--soft)}
+.av{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:#fff;font:800 15px var(--f-display)}
+.prop .t{flex:1;min-width:0}
+.prop .t b{display:block}
+.prop .t span{font-size:14px;color:var(--muted)}
+.prop .v{font:800 21px var(--f-display);letter-spacing:-.02em;white-space:nowrap}
+.tag{display:inline-block;font:700 12.5px var(--f-body);padding:2px 8px;border-radius:999px;background:var(--ok-bg);color:var(--ok);margin-left:6px;vertical-align:2px}
+
+/* seções */
+section{padding-block:68px}
+section.alt{background:var(--surface)}
+.sec-h{max-width:640px;margin-bottom:34px}
+.sec-h h2{font-size:clamp(28px,4vw,40px);line-height:1.08;font-weight:800}
+.sec-h p{margin-top:12px;color:var(--muted);font-size:18px}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;list-style:none;margin:0;padding:0;counter-reset:s}
+.steps li{counter-increment:s;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:24px;min-width:0}
+.alt .steps li{background:var(--bg)}
+.steps li::before{content:counter(s);display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:var(--sun);color:var(--sun-ink);font:800 19px var(--f-display);margin-bottom:14px}
+.steps h3{font-size:21px;margin-bottom:6px}
+.steps p{color:var(--muted)}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px;align-items:start}
+.facts{display:grid;gap:14px;list-style:none;margin:0;padding:0}
+.facts li{display:flex;gap:14px;min-width:0}
+.facts li > span{flex:none;width:42px;height:42px;border-radius:13px;background:var(--soft);color:var(--brand);display:grid;place-items:center}
+.facts b{display:block;font-size:18px}
+.facts p{color:var(--muted);font-size:16px}
+.ic{display:block}
+.money{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:24px;min-width:0}
+.alt .money{background:var(--bg)}
+.money h3{font-size:20px;margin-bottom:14px}
+.mrow{display:flex;justify-content:space-between;gap:12px;padding-block:10px;border-top:1px solid var(--line)}
+.mrow:first-of-type{border-top:0}
+.mrow.total{font-weight:800;font-size:19px}
+.money small{display:block;margin-top:12px;color:var(--muted);font-size:14px}
+.places{display:flex;flex-wrap:wrap;gap:10px}
+.place{padding:10px 16px;border-radius:999px;border:1.5px solid var(--line);font-weight:600;background:var(--surface)}
+.place.on{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.cats{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.cats .place{font-size:15px}
+.cats .place.soon{color:var(--muted);border-style:dashed}
+
+/* perguntas frequentes */
+.faq{max-width:760px;margin-inline:auto;display:grid;gap:10px}
+.faq details{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:0 18px}
+.alt .faq details{background:var(--bg)}
+.faq summary{cursor:pointer;font:700 18px var(--f-body);padding:16px 0;list-style:none;display:flex;justify-content:space-between;gap:12px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font:700 24px var(--f-body);color:var(--brand);line-height:1}
+.faq details[open] summary::after{content:"\2212"}
+.faq details p{color:var(--muted);padding:0 0 16px}
+.faq a{color:var(--brand)}
+
+/* formulário */
+.form-card{background:var(--surface);border:1px solid var(--line);border-radius:26px;padding:28px;max-width:720px;margin-inline:auto;box-shadow:0 14px 40px rgba(18,26,58,.08)}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--bg);padding:4px;border-radius:14px;margin-bottom:22px}
+.seg button{border:0;background:none;color:var(--muted);font:700 16px var(--f-body);padding:12px 8px;border-radius:11px;cursor:pointer}
+.seg button[aria-selected="true"]{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(18,26,58,.2)}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.fields .full{grid-column:1/-1}
+label.l,.lbl{display:block;font-weight:700;font-size:15px;margin-bottom:6px}
+input[type=text],input[type=tel],select,textarea{width:100%;border:1.5px solid var(--line);background:var(--bg);color:var(--text);border-radius:12px;padding:12px 14px;font:500 17px var(--f-body)}
+textarea{min-height:92px;resize:vertical}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:15px;color:var(--muted)}
+.chk input{margin-top:4px;width:18px;height:18px;accent-color:var(--brand)}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill input{position:absolute;opacity:0;pointer-events:none}
+.pill span{display:inline-block;padding:9px 14px;border-radius:999px;border:1.5px solid var(--line);font-weight:600;font-size:15px;cursor:pointer;background:var(--bg)}
+.pill input:checked + span{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.pill input:focus-visible + span{outline:3px solid var(--sun);outline-offset:2px}
+.msg{margin-top:16px;padding:14px 16px;border-radius:14px;font-weight:600}
+.msg.ok{background:var(--ok-bg);color:var(--ok)}
+.msg.err{background:var(--err-bg);color:var(--err)}
+.msg.info{background:var(--soft);color:var(--text)}
+
+/* painel do dono */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:22px;margin-top:40px}
+.panel h3{font-size:22px;margin-bottom:4px}
+.tw{overflow-x:auto;margin-top:14px;border:1px solid var(--line);border-radius:14px}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:15px}
+th{text-align:left;padding:10px 12px;background:var(--bg);color:var(--muted);font-weight:700;font-size:14px}
+td{padding:10px 12px;border-top:1px solid var(--line);vertical-align:top}
+footer{padding-block:40px;color:var(--muted);font-size:15px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
+
+@media (max-width:860px){
+  .hero-grid,.split{grid-template-columns:minmax(0,1fr);gap:32px}
+  .hero-grid{padding-block:20px 44px}
+  .steps{grid-template-columns:minmax(0,1fr)}
+  section{padding-block:48px}
+}
+@media (max-width:560px){
+  .fields{grid-template-columns:minmax(0,1fr)}
+  .form-card{padding:20px}
+  body{font-size:16px}
+  .nav a.l{display:none}
+  .nav{gap:10px}
+  .nav .btn{padding:9px 12px!important;font-size:14px!important;white-space:nowrap}
+}
+@media (prefers-reduced-motion:no-preference){
+  .prop.best{animation:pop .5s .3s both ease-out}
+  @keyframes pop{from{transform:scale(.97)}to{transform:none}}
+}
+</style>
+
+<header class="hero">
+ <div class="wrap">
+  <nav class="nav" aria-label="Principal">
+   <a class="logo" href="#topo">Resolvo<b>Já</b></a>
+   <span class="sp"></span>
+   <a class="l" href="#como">Como funciona</a>
+   <a class="l" href="#profissionais">Para profissionais</a>
+   <a class="l" href="#faq">Perguntas</a>
+   <a class="btn sun" style="padding:10px 16px;font-size:15px" href="/app/">Entrar ou cadastre-se</a>
+  </nav>
+  <div class="hero-grid" id="topo">
+   <div>
+    <h1>Descreva o serviço. Receba propostas. Contrate com segurança.</h1>
+    <p class="lead">O Resolvo Já conecta moradores de todo o Brasil a eletricistas, encanadores e montadores que atendem perto de casa. Você compara preço, prazo e horário antes de decidir.</p>
+    <div class="cta">
+     <a class="btn sun" href="/app/#/?modo=cadastro">Quero contratar</a>
+     <a class="btn line" href="/app/#/?modo=cadastro">Sou profissional</a>
+    </div>
+    <p class="fine">Aberto em todo o Brasil. Criar conta é grátis. Já tem conta? <a href="/app/">Entrar</a>.</p>
+   </div>
+   <div class="demo" aria-label="Como funciona o pedido">
+    <div class="req"><small>Passo 1 · Você descreve</small><b>Ex.: montar um guarda-roupa de 6 portas</b></div>
+    <h3>Passo 2 · Profissionais da sua região enviam propostas</h3>
+    <p style="font-size:15.5px;color:var(--muted);margin:6px 0 14px">Cada proposta traz preço, prazo e horário. Você compara e escolhe quem contratar.</p>
+    <div class="prop best"><div class="t"><b>Passo 3 · Você contrata pelo app</b><span>Pagamento e conversa em um só lugar</span></div></div>
+    <p style="font-size:13px;color:var(--muted);margin-top:10px">Estamos recebendo os primeiros profissionais. Seja um deles: <a href="/app/#/?modo=cadastro">cadastre-se grátis</a>.</p>
+   </div>
+  </div>
+ </div>
+</header>
+
+<main>
+<section id="como">
+ <div class="wrap">
+  <div class="sec-h"><h2>Do pedido ao serviço feito, sem sair do aplicativo</h2><p>Três passos para o cliente. Nenhum cadastro de cartão antes de escolher o profissional.</p></div>
+  <ol class="steps">
+   <li><h3>Conte o que precisa</h3><p>Escreva o problema, mande fotos e diga quando quer. Leva cerca de dois minutos.</p></li>
+   <li><h3>Compare as propostas</h3><p>Profissionais da sua região respondem com preço, prazo e horário. Veja o perfil de cada profissional e, com o tempo, as avaliações de outros clientes.</p></li>
+   <li><h3>Contrate e acompanhe</h3><p>Pague pelo app com Pix ou cartão, converse pelo chat e confirme quando o serviço terminar. No cartão, o valor fica reservado até a sua confirmação. No Pix, o pagamento é na hora e, se houver problema, você abre uma disputa pelo app.</p></li>
+  </ol>
+  <div class="cats" aria-label="Categorias do piloto">
+   <span class="place">Eletricista</span><span class="place">Encanador</span><span class="place">Montador de móveis</span>
+   <span class="place soon">Pintor · em breve</span><span class="place soon">Diarista · em breve</span><span class="place soon">Fretes · em breve</span>
+  </div>
+ </div>
+</section>
+
+<section class="alt" id="profissionais">
+ <div class="wrap split">
+  <div>
+   <div class="sec-h" style="margin-bottom:24px"><h2>Para quem vive do próprio trabalho</h2><p>Receba pedidos de clientes que já decidiram contratar, na sua região e nas suas categorias.</p></div>
+   <ul class="facts">
+    <li><span><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></span><div><b>Pedidos perto de você</b><p>Você escolhe os bairros e as categorias que atende. Só vê pedidos que cabem na sua rotina.</p></div></li>
+    <li><span><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></span><div><b>Pagamento garantido</b><p>O cliente paga pelo app ao contratar (cartão reservado ou Pix). Você faz o serviço com o pagamento já assegurado.</p></div></li>
+    <li><span><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></span><div><b>Agenda e ganhos num lugar</b><p>Veja os serviços do dia, quanto já ganhou no mês e saque por Pix.</p></div></li>
+   </ul>
+  </div>
+  <div class="money">
+   <h3>Quanto fica com você</h3>
+   <div class="mrow"><span>Serviço de montagem</span><b>R$ 180,00</b></div>
+   <div class="mrow"><span>Comissão do Resolvo Já (10%)</span><b>− R$ 18,00</b></div>
+   <div class="mrow total"><span>Você recebe</span><b>R$ 162,00</b></div>
+   <small>A comissão é cobrada só quando o serviço é contratado e pago pelo app. Criar conta é grátis. Exemplo para ilustrar o cálculo.</small>
+   <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line)"><b style="display:block;font-size:18px">Profissional verificado</b><p style="color:var(--muted);margin:4px 0 12px;font-size:15.5px">Taxa única de <b>R$ 29,90</b>, opcional, para conferirmos seus dados e liberarmos o selo no app. Você tem 7 dias para desistir e receber o reembolso. A taxa não garante pedidos.</p><a class="btn" href="/pagar.html" style="width:100%">Quero ser verificado</a></div>
+  </div>
+ </div>
+</section>
+
+<section id="onde">
+ <div class="wrap">
+  <div class="sec-h"><h2>Em todo o Brasil, no seu bairro.</h2><p>Informe estado, cidade e bairro no pedido e os profissionais da sua região enviam propostas.</p></div>
+  <div class="places" aria-label="Cidades com atendimento">
+   <a class="place on" href="/app/#/?modo=cadastro" style="text-decoration:none">Criar conta grátis</a>
+  </div>
+ </div>
+</section>
+
+<section class="alt" id="cadastro">
+ <div class="wrap">
+  <div class="sec-h" style="margin-inline:auto;text-align:center"><h2>Crie sua conta e comece agora</h2><p>O Resolvo Já está aberto em todo o Brasil. Cliente ou profissional, o cadastro leva poucos minutos e é grátis.</p></div>
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:0 0 56px">
+   <a class="btn" href="/app/#/?modo=cadastro">Criar conta grátis</a>
+   <a class="btn line" href="/app/">Já tenho conta · Entrar</a>
+  </div>
+
+
+ </div>
+</section>
+<section id="faq">
+ <div class="wrap">
+  <div class="sec-h" style="margin-inline:auto;text-align:center"><h2>Perguntas frequentes</h2><p>O que a maioria quer saber antes de entrar.</p></div>
+  <div class="faq">
+   <details><summary>Quanto custa para quem contrata?</summary><p>Criar conta e pedir propostas não custa nada. Você paga apenas o serviço que decidir contratar, pelo aplicativo.</p></details>
+   <details><summary>Quanto custa para o profissional?</summary><p>Criar conta é grátis. O Resolvo Já fica com 10% de cada serviço contratado e pago pelo app, e você recebe o resto. A verificação do perfil é opcional e custa R$ 29,90, uma única vez.</p></details>
+   <details><summary>O que é a verificação de profissional?</summary><p>Conferimos seus dados cadastrais e você recebe o selo "Profissional verificado". Ela ajuda a passar confiança, mas não garante a quantidade de pedidos.</p></details>
+   <details><summary>Posso pedir o dinheiro de volta?</summary><p>Sim. Você tem 7 dias corridos depois do pagamento para desistir e receber o reembolso integral. Veja os <a href="/termos.html">Termos e reembolso</a>.</p></details>
+   <details><summary>O aplicativo já está aberto?</summary><p>Sim, está aberto para todo o Brasil. Crie sua conta em <a href="/app/#/?modo=cadastro">resolvoja.app.br/app</a>. Quanto mais profissionais na sua cidade, mais rápido chegam as propostas.</p></details>
+   <details><summary>Meus dados estão seguros?</summary><p>Usamos seus dados só para o funcionamento do serviço. Você pode pedir a exclusão quando quiser. Pagamentos são feitos no Mercado Pago, e não guardamos dados de cartão. Leia a <a href="/privacidade.html">Política de Privacidade</a>.</p></details>
+   <details><summary>Onde vocês atendem?</summary><p>Em todo o Brasil. Você informa estado, cidade e bairro no pedido e os profissionais da sua região enviam propostas. Estamos crescendo cidade por cidade, então em algumas ainda pode demorar mais para chegar a primeira proposta.</p></details>
+  </div>
+ </div>
+</section>
+</main>
+
+<footer>
+ <div class="wrap"><span><b>Resolvo Já</b> · Conectando quem precisa com quem sabe fazer.</span><span><a href="/termos.html" style="color:inherit">Termos e reembolso</a> · <a href="/privacidade.html" style="color:inherit">Política de Privacidade</a> · <a href="mailto:contato@resolvoja.app.br" style="color:inherit">contato@resolvoja.app.br</a> · Serra, Espírito Santo</span></div>
+</footer>
+
+
+
+<script src="/config.js"></script>
+<script src="/site.js"></script>
+</body>
+</html>

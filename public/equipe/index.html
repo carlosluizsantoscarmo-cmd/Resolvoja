@@ -266,7 +266,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
   function renderLogin(msg){
     $app.innerHTML =
       (LIVE ? '' : '<div class="demo">Modo demonstração: os dados são de exemplo e nada é salvo.</div>') +
-      '<form class="login" id="loginForm"><div class="logo" style="font-size:28px">Resolvo<b>Já</b></div>' +
+      '<form class="login" id="loginForm"><a class="logo" href="/" style="font-size:28px;text-decoration:none;color:inherit" aria-label="Voltar à página inicial">Resolvo<b>Já</b></a>' +
       '<p style="color:var(--muted);margin:8px 0 0">Painel da equipe</p>' +
       (LIVE ? '<label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required>' +
               '<label for="pass">Senha</label><input id="pass" type="password" autocomplete="current-password" required>' : '') +
@@ -315,7 +315,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
     var open = state.payouts.filter(function(p){return p.status==='requested';}).reduce(function(a,p){return a+p.amount_cents;},0);
     $app.innerHTML =
       (LIVE ? '' : '<div class="demo">Modo demonstração: os dados são de exemplo e nada é salvo.</div>') +
-      '<header class="top"><div class="wrap"><div class="bar"><div class="logo">Resolvo<b>Já</b></div><span class="tag">Painel da equipe</span><span class="sp"></span>' +
+      '<header class="top"><div class="wrap"><div class="bar"><a class="logo" href="/" style="text-decoration:none;color:inherit" aria-label="Voltar à página inicial">Resolvo<b>Já</b></a><span class="tag">Painel da equipe</span><span class="sp"></span>' +
       '<span style="color:var(--muted);font-size:14px">'+esc(state.user.name)+'</span><button class="btn ghost" id="pkreg">Ativar Face ID</button><button class="btn ghost" id="out">Sair</button></div>' +
       '<nav class="tabs" role="tablist">' + tabs.map(function(t){
         return '<button class="tab" role="tab" aria-selected="'+(state.tab===t[0])+'" data-tab="'+t[0]+'">'+t[1]+(t[2]===null?'':' <span class="count'+(t[2]?'':' zero')+'">'+t[2]+'</span>')+'</button>';

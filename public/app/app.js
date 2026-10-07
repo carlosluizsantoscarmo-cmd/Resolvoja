@@ -352,7 +352,12 @@
     try {
       await loadMe();
       if (!profile) return screenBasicProfile();
-      if (profile.role === "admin") return shell('<div class="card"><h2 style="margin-top:0">Conta da equipe</h2><p>Use o painel da equipe: <a href="/equipe/">abrir painel</a>.</p><button class="ghost full" id="out" type="button">Sair</button></div>', "perfil"), ($("out").onclick = signOut);
+      if (profile.role === "admin") {
+        // Conta da equipe: vai direto para o painel (a sessão é a mesma, não pede login de novo).
+        loading();
+        location.replace("/equipe/");
+        return;
+      }
       if (profile.role === "pro" && (!pro || pro._incomplete)) return screenProSetup();
       var hp = hashParts(), h = hp.path, m;
       if (h === "#/perfil") return screenPerfil();

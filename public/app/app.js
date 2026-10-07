@@ -419,6 +419,7 @@
       if ((m = h.match(/^#\/pedido\/([0-9a-f-]{36})$/i))) return profile.role === "pro" ? proRequest(m[1]) : clientRequest(m[1]);
       if (profile.role === "pro") return h === "#/propostas" ? proProposals() : proHome();
       if (h === "#/novo") return clientNew(hp.q);
+      if (h === "#/" && hp.q.get("pro")) { var qs = new URLSearchParams(); qs.set("pro", hp.q.get("pro")); if (hp.q.get("c")) qs.set("c", hp.q.get("c")); return go("#/novo?" + qs.toString()); }
       if (h === "#/pedidos") return clientList();
       return clientHome();
     } catch (x) {
@@ -552,7 +553,12 @@
     if (params && params.get("cid")) preCat = params.get("cid");
     else if (params && params.get("c")) { var k = cats.filter(function (x) { return x.name.toLowerCase().indexOf(params.get("c").toLowerCase()) === 0; })[0]; if (k) preCat = String(k.id); }
     var preTit = params && params.get("t") ? params.get("t").slice(0, 80) : "";
-    shell('<p class="muted">Descreva o que você precisa. Profissionais perto de você enviam propostas.</p>' +
+    var targetId = params && /^[0-9a-f-]{36}$/i.test(params.get("pro") || "") ? params.get("pro") : "", targetName = "";
+    if (targetId) {
+      var tp = await sb.from("pro_public").select("name").eq("id", targetId).maybeSingle();
+      if (tp.data && tp.data.name) { var nn = tp.data.name.trim().split(/\s+/); targetName = nn[0] + (nn.length > 1 ? " " + nn[nn.length - 1][0].toUpperCase() + "." : ""); } else targetId = "";
+    }
+    shell((targetId ? '<div class="banner ok">Você está pedindo um orçamento para <b>' + e(targetName) + "</b>. Ele será avisado primeiro.</div>" : "") + '<p class="muted">Descreva o que você precisa. Profissionais perto de você enviam propostas.</p>' +
       '<form class="card" id="f" novalidate>' +
       '<label for="cat" style="margin-top:0">Tipo de serviço</label><select id="cat"><option value="">Escolha…</option>' + cats.map(function (x) { return '<option value="' + x.id + '">' + e(x.name) + "</option>"; }).join("") + "</select>" +
       '<label for="tit">Título curto</label><input id="tit" maxlength="80" placeholder="Ex.: Trocar chuveiro elétrico">' +
@@ -585,7 +591,7 @@
       try {
         var a = await sb.from("addresses").insert({ user_id: user.id, label: "Pedido", street: rua, number: $("num").value.trim() || null, complement: $("comp").value.trim() || null, neighborhood: bai, city: cid, state: $("uf").value }).select("id").single();
         if (a.error) throw a.error;
-        var q = await sb.from("service_requests").insert({ client_id: user.id, category_id: cat, address_id: a.data.id, title: tit, description: des, desired_date: $("dat").value || null, desired_slot: $("slot").value }).select("id").single();
+        var q = await sb.from("service_requests").insert({ client_id: user.id, category_id: cat, address_id: a.data.id, title: tit, description: des, desired_date: $("dat").value || null, desired_slot: $("slot").value, target_pro: targetId || null }).select("id").single();
         if (q.error) throw q.error;
         toast("Pedido publicado!"); go("#/pedido/" + q.data.id);
       } catch (x) { $("go").disabled = false; bad(friendly(x)); }

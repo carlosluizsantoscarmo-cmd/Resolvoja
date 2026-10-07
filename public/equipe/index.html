@@ -148,6 +148,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       logout:function(){ return Promise.resolve(); },
       load:function(){ state.pros=demo.pros; state.reqs=demo.reqs; state.disputes=demo.disputes; state.payouts=demo.payouts; state.negs=demo.negs; state.cats=demo.cats; state.regs=demo.regs; state.reports=demo.reports; state.ov=demo.ov; state.clients=[]; state.leads=[]; state.orders=[]; return Promise.resolve(); },
       docUrl:function(){ return Promise.reject(new Error('No modo demonstração não há documentos.')); },
+      resume:function(){ return Promise.resolve(null); },
       delRemote:function(){ return Promise.resolve(); },
       authHeader:function(){ return Promise.resolve({}); },
       markPaid:function(id){ demo.negs.forEach(function(n){ if(n.request_id===id) n.status='hired'; }); return Promise.resolve(); },
@@ -200,6 +201,14 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       registerPasskey:function(){
         if(!sb.auth.registerPasskey) return Promise.reject(new Error('Este navegador ou esta versão ainda não suporta Face ID.'));
         return sb.auth.registerPasskey().then(function(r){ if(r.error) throw new Error('Não foi possível ativar o Face ID: '+(r.error.message||'tente de novo.')); return true; });
+      },
+      resume:function(){
+        // Já está logado como admin (por exemplo, veio do app)? Entra direto, sem pedir senha. Quem não é admin não é deslogado.
+        return sb.auth.getSession().then(function(ses){
+          var u = ses.data && ses.data.session && ses.data.session.user;
+          if(!u) return null;
+          return sb.from('profiles').select('name,role').eq('id',u.id).single().then(function(p){ return (p.data && p.data.role==='admin') ? {name:p.data.name} : null; });
+        }).catch(function(){ return null; });
       },
       logout:function(){ return sb.auth.signOut(); },
       load:function(){
@@ -510,7 +519,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
   }
 
   /* ---------------------------------------------------------- início */
-  if(LIVE){ api.init().then(function(){ renderLogin(); }).catch(function(e){ renderLogin(e.message); }); }
+  if(LIVE){ api.init().then(function(){ return api.resume(); }).then(function(u){ if(!u){ renderLogin(); return; } state.user=u; return api.load().then(renderApp); }).catch(function(e){ renderLogin(e.message); }); }
   else { renderLogin(); }
 })();
 </script>

@@ -227,7 +227,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
 
 <section id="vitrine" hidden>
  <div class="wrap">
-  <div class="sec-h"><h2>Profissionais no Resolvo Já</h2><p id="vitrine-n">Profissionais cadastrados e aprovados pela nossa equipe.</p></div>
+  <div class="sec-h"><h2>Profissionais no Resolvo Já</h2><p id="vitrine-n">Clique no profissional para pedir um orçamento. É preciso criar uma conta grátis para continuar.</p></div>
   <div id="vitrine-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px"></div>
  </div>
 </section>
@@ -310,7 +310,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
       if(x.cities&&x.cities.length) meta.push(esc(x.cities.slice(0,2).join(', ')));
       if(x.years_exp) meta.push(x.years_exp+' anos de experiência');
       if(x.rating_count>0) meta.push('Nota '+Number(x.rating_avg).toFixed(1).replace('.',',')+' ('+x.rating_count+')');
-      return '<div class="prop"><span class="av" style="background:'+cores[i%cores.length]+'">'+ini+'</span><div class="t"><b>'+esc(x.display_name)+'</b><span>'+esc((x.categories||[]).join(', ')||'Profissional')+'</span>'+(meta.length?'<span style="display:block">'+meta.join(' · ')+'</span>':'')+'</div></div>';
+      var cat=(x.categories&&x.categories[0])?'&c='+encodeURIComponent(x.categories[0]):'';return '<a class="prop" style="text-decoration:none;color:inherit" href="/app/#/?modo=cadastro&pro='+encodeURIComponent(x.id||'')+cat+'"><span class="av" style="background:'+cores[i%cores.length]+'">'+ini+'</span><div class="t"><b>'+esc(x.display_name)+'</b><span>'+esc((x.categories||[]).join(', ')||'Profissional')+'</span>'+(meta.length?'<span style="display:block">'+meta.join(' · ')+'</span>':'')+'<span style="display:block;margin-top:6px;font-weight:700;color:var(--brand)">Pedir orçamento →</span></div></a>';
     }).join('');
     document.getElementById('vitrine').hidden=false;
   }).catch(function(){});

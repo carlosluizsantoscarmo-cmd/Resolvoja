@@ -198,13 +198,12 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
     </div>
     <p class="fine">Aberto em todo o Brasil. Criar conta é grátis. Já tem conta? <a href="/app/">Entrar</a>.</p>
    </div>
-   <div class="demo" aria-label="Exemplo de pedido e propostas">
-    <div class="req"><small>Pedido enviado há 8 minutos · Laranjeiras, Serra</small><b>Montar guarda-roupa de 6 portas</b></div>
-    <h3>3 propostas recebidas</h3>
-    <div class="prop best"><span class="av" style="background:#1F3BD1">MV</span><div class="t"><b>Marcos Vinícius</b><span>Pode ir amanhã, 14h</span></div><div class="v">R$ 160</div></div>
-    <div class="prop"><span class="av" style="background:#0E8A5F">AS</span><div class="t"><b>Ademir Souza</b><span>Pode ir domingo, 9h</span></div><div class="v">R$ 140</div></div>
-    <div class="prop"><span class="av" style="background:#B4470C">CF</span><div class="t"><b>Carlos &amp; Filho</b><span>Pode ir hoje, 17h</span></div><div class="v">R$ 190</div></div>
-    <p style="font-size:13px;color:var(--muted);margin-top:10px">Exemplo ilustrativo. Nomes e valores fictícios.</p>
+   <div class="demo" aria-label="Como funciona o pedido">
+    <div class="req"><small>Passo 1 · Você descreve</small><b>Conte o que precisa, com fotos e horário</b></div>
+    <h3>Passo 2 · Profissionais da sua região enviam propostas</h3>
+    <p style="font-size:15.5px;color:var(--muted);margin:6px 0 14px">Cada proposta traz preço, prazo e horário. Você compara e escolhe quem contratar.</p>
+    <div class="prop best"><div class="t"><b>Passo 3 · Você contrata pelo app</b><span>Pagamento e conversa em um só lugar</span></div></div>
+    <p style="font-size:13px;color:var(--muted);margin-top:10px">Estamos recebendo os primeiros profissionais. Seja um deles: <a href="/app/#/?modo=cadastro">cadastre-se grátis</a>.</p>
    </div>
   </div>
  </div>
@@ -226,6 +225,13 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
  </div>
 </section>
 
+<section id="vitrine" hidden>
+ <div class="wrap">
+  <div class="sec-h"><h2>Profissionais no Resolvo Já</h2><p id="vitrine-n">Profissionais cadastrados e aprovados pela nossa equipe.</p></div>
+  <div id="vitrine-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px"></div>
+ </div>
+</section>
+
 <section class="alt" id="profissionais">
  <div class="wrap split">
   <div>
@@ -238,10 +244,9 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
   </div>
   <div class="money">
    <h3>Quanto fica com você</h3>
-   <div class="mrow"><span>Serviço de montagem</span><b>R$ 180,00</b></div>
-   <div class="mrow"><span>Comissão do Resolvo Já (10%)</span><b>− R$ 18,00</b></div>
-   <div class="mrow total"><span>Você recebe</span><b>R$ 162,00</b></div>
-   <small>A comissão é cobrada só quando o serviço é contratado e pago pelo app. Criar conta é grátis. Exemplo para ilustrar o cálculo.</small>
+   <div class="mrow"><span>Comissão do Resolvo Já</span><b>10%</b></div>
+   <div class="mrow total"><span>Você recebe</span><b>90%</b></div>
+   <small>A comissão é cobrada só quando o serviço é contratado e pago pelo app. Criar conta é grátis.</small>
    <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line)"><b style="display:block;font-size:18px">Profissional verificado</b><p style="color:var(--muted);margin:4px 0 12px;font-size:15.5px">Taxa única de <b>R$ 29,90</b>, opcional, para conferirmos seus dados e liberarmos o selo no app. Você tem 7 dias para desistir e receber o reembolso. A taxa não garante pedidos.</p><a class="btn" href="/pagar.html" style="width:100%">Quero ser verificado</a></div>
   </div>
  </div>
@@ -289,6 +294,28 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
 
 
 
+<script src="/app/app-config.js"></script>
+<script>
+(function(){
+  var C=window.RJ_APP; if(!C||!C.url||!C.anonKey||!window.fetch) return;
+  function esc(t){return String(t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  var cores=['#1F3BD1','#0E8A5F','#B4470C','#7A3BC4','#B0245A'];
+  fetch(C.url+'/rest/v1/rpc/public_pros',{method:'POST',headers:{apikey:C.anonKey,Authorization:'Bearer '+C.anonKey,'Content-Type':'application/json'},body:'{}'})
+   .then(function(r){return r.ok?r.json():[]}).then(function(l){
+    if(!Array.isArray(l)||!l.length) return;
+    document.getElementById('vitrine-n').textContent=l.length===1?'1 profissional aprovado pela nossa equipe.':l.length+' profissionais aprovados pela nossa equipe.';
+    document.getElementById('vitrine-list').innerHTML=l.map(function(x,i){
+      var ini=esc((x.display_name||'?').replace(/[^A-Za-zÀ-ú ]/g,'').split(' ').slice(0,2).map(function(w){return w[0]||''}).join('').toUpperCase());
+      var meta=[];
+      if(x.cities&&x.cities.length) meta.push(esc(x.cities.slice(0,2).join(', ')));
+      if(x.years_exp) meta.push(x.years_exp+' anos de experiência');
+      if(x.rating_count>0) meta.push('Nota '+Number(x.rating_avg).toFixed(1).replace('.',',')+' ('+x.rating_count+')');
+      return '<div class="prop"><span class="av" style="background:'+cores[i%cores.length]+'">'+ini+'</span><div class="t"><b>'+esc(x.display_name)+'</b><span>'+esc((x.categories||[]).join(', ')||'Profissional')+'</span>'+(meta.length?'<span style="display:block">'+meta.join(' · ')+'</span>':'')+'</div></div>';
+    }).join('');
+    document.getElementById('vitrine').hidden=false;
+  }).catch(function(){});
+})();
+</script>
 <script src="/config.js"></script>
 <script src="/site.js"></script>
 </body>

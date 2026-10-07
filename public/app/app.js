@@ -300,7 +300,9 @@
     cats = c.data || []; regions = rg.data || [];
     plain('<form class="card" id="f" novalidate>' +
       '<label>O que você faz?</label><div class="chips">' + cats.map(function (x) { return '<label><input type="checkbox" name="cat" value="' + x.id + '"> ' + e(x.name) + "</label>"; }).join("") + "</div>" +
+      '<label for="outra" style="margin-top:14px">Sua profissão não está na lista? (opcional)</label><input id="outra" maxlength="60" placeholder="Ex.: Fotógrafo" autocomplete="off"><p class="muted small" style="margin:6px 0 0">Escreva aqui e a equipe cria a categoria para você.</p>' +
       '<label>Onde você atende?</label><div class="chips">' + regions.map(function (x) { return '<label><input type="checkbox" name="reg" value="' + x.id + '"> ' + e(x.name) + " (" + e(x.city) + ")</label>"; }).join("") + "</div>" +
+      '<label style="margin-top:14px">Seu bairro não está na lista? (opcional)</label><div style="display:flex;gap:10px"><input id="ocity" maxlength="60" placeholder="Cidade" aria-label="Cidade" autocomplete="off"><input id="onei" maxlength="60" placeholder="Bairro" aria-label="Bairro" autocomplete="off"></div><p class="muted small" style="margin:6px 0 0">Se você atende em outro lugar, escreva aqui. Avisamos quando chegarmos lá.</p>' +
       '<label for="exp">Anos de experiência</label><input id="exp" type="number" inputmode="numeric" min="0" max="70">' +
       '<label for="bio">Fale um pouco sobre seu trabalho</label><textarea id="bio" maxlength="600" placeholder="Ex.: Eletricista há 8 anos. Instalação de chuveiro, tomadas, quadro de luz."></textarea>' +
           '<label for="doc">Documento com foto (RG ou CNH)</label><input id="doc" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"><p class="muted small">Foto nítida ou PDF, até 5 MB. Só a equipe do Resolvo Já vê este arquivo, para confirmar quem você é. Ele não aparece para clientes.</p>' +
@@ -312,8 +314,13 @@
       var cs = Array.prototype.map.call(document.querySelectorAll('input[name="cat"]:checked'), function (i) { return Number(i.value); });
       var rs = Array.prototype.map.call(document.querySelectorAll('input[name="reg"]:checked'), function (i) { return Number(i.value); });
       var exp = $("exp").value === "" ? null : Number($("exp").value), bio = $("bio").value.trim();
-      if (!cs.length) return bad("Escolha pelo menos um serviço.");
-      if (!rs.length) return bad("Escolha pelo menos um bairro de atendimento.");
+      var outra = ($("outra").value || "").replace(/\s+/g, " ").trim();
+      if (outra && outra.length < 3) return bad("Escreva o nome da profissão com pelo menos 3 letras.");
+      if (!cs.length && !outra) return bad("Escolha pelo menos um serviço ou escreva a sua profissão.");
+      var oc = ($("ocity").value || "").replace(/\s+/g, " ").trim(), on = ($("onei").value || "").replace(/\s+/g, " ").trim();
+      if ((oc && !on) || (!oc && on)) return bad("Preencha a cidade e o bairro, ou deixe os dois em branco.");
+      if (oc && (oc.length < 2 || on.length < 2)) return bad("Confira o nome da cidade e do bairro.");
+      if (!rs.length && !(oc && on)) return bad("Escolha pelo menos um bairro ou escreva o seu.");
       if (exp !== null && (!(exp >= 0) || exp > 70)) return bad("Confira os anos de experiência.");
       var df = $("doc").files[0], needDoc = !pro || !pro.document_path;
       if (needDoc && !df) return bad("Envie a foto do seu RG ou CNH para a equipe conferir.");
@@ -324,16 +331,22 @@
       try {
         var path = df ? await uploadDoc(df) : null;
         if (!pro) {
-          var a = await sb.from("pro_profiles").insert({ user_id: user.id, bio: bio || null, years_exp: exp, status: "pending", document_path: path });
+          var a = await sb.from("pro_profiles").insert({ user_id: user.id, bio: bio || null, years_exp: exp, status: "pending", document_path: path, other_category: outra || null, other_city: oc || null, other_neighborhood: on || null });
           if (a.error) throw a.error;
-        } else if (path) {
-          var a2 = await sb.from("pro_profiles").update({ document_path: path }).eq("user_id", user.id);
+        } else {
+          var up = { other_category: outra || null, other_city: oc || null, other_neighborhood: on || null };
+          if (path) up.document_path = path;
+          var a2 = await sb.from("pro_profiles").update(up).eq("user_id", user.id);
           if (a2.error) throw a2.error;
         }
-        var b1 = await sb.from("pro_categories").upsert(cs.map(function (id) { return { user_id: user.id, category_id: id }; }));
-        if (b1.error) throw b1.error;
-        var b2 = await sb.from("pro_regions").upsert(rs.map(function (id) { return { user_id: user.id, region_id: id }; }));
-        if (b2.error) throw b2.error;
+        if (cs.length) {
+          var b1 = await sb.from("pro_categories").upsert(cs.map(function (id) { return { user_id: user.id, category_id: id }; }));
+          if (b1.error) throw b1.error;
+        }
+        if (rs.length) {
+          var b2 = await sb.from("pro_regions").upsert(rs.map(function (id) { return { user_id: user.id, region_id: id }; }));
+          if (b2.error) throw b2.error;
+        }
         var t = await sb.from("terms_acceptances").select("id").eq("document", "termo_prestador").limit(1);
         if (!t.data || !t.data.length) {
           var t2 = await sb.rpc("accept_terms", { p_version: TERMS_VERSION, p_user_agent: String(navigator.userAgent).slice(0, 200) });
@@ -378,7 +391,7 @@
       if (pro) {
         var c = await sb.from("pro_categories").select("category_id", { count: "exact", head: true }).eq("user_id", user.id);
         var t = await sb.from("terms_acceptances").select("id", { count: "exact", head: true }).eq("document", "termo_prestador");
-        if (!(c.count > 0) || !(t.count > 0)) pro._incomplete = true;
+        if (!(c.count > 0 || pro.other_category) || !(t.count > 0)) pro._incomplete = true;
       }
     }
   }
@@ -509,7 +522,7 @@
     var c = await sb.from("categories").select("id,name").eq("active", true).order("name");
     var quick = [["Chuveiro queimou", "eletric"], ["Torneira pingando", "encan"], ["Montar guarda-roupa", "montad"]];
     var first = profile.name.split(" ")[0];
-    var head = '<div class="hero"><div class="hrow"><div><small>Serviço em</small><span class="loc">' + icon("pin", 18) + 'Serra, ES</span></div><span class="hello">Olá, ' + e(first) + "</span></div>" +
+    var head = '<div class="hero"><div class="hrow"><div><small>Serviço em</small><span class="loc">' + icon("pin", 18) + 'Todo o Brasil</span></div><span class="hello">Olá, ' + e(first) + "</span></div>" +
       "<h1>O que você precisa resolver hoje?</h1>" +
       '<form class="search" id="sf" role="search">' + icon("search", 20) + '<input id="sq" maxlength="80" placeholder="Ex.: chuveiro não esquenta" aria-label="Descreva o serviço"><button type="submit" class="slim">Buscar</button></form>' +
       '<div class="chips-h">' + quick.map(function (q) { return '<a href="#/novo?t=' + encodeURIComponent(q[0]) + "&c=" + q[1] + '">' + e(q[0]) + "</a>"; }).join("") + "</div>" +
@@ -533,17 +546,22 @@
     var c = await sb.from("categories").select("id,name").eq("active", true).order("name");
     var rg = await sb.from("regions").select("id,city,name").eq("active", true).order("city").order("name");
     cats = c.data || []; regions = rg.data || [];
+    var UFS = ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
+    var cityList = regions.map(function (x) { return x.city; }).filter(function (v, i, a) { return a.indexOf(v) === i; });
     var preCat = "";
     if (params && params.get("cid")) preCat = params.get("cid");
     else if (params && params.get("c")) { var k = cats.filter(function (x) { return x.name.toLowerCase().indexOf(params.get("c").toLowerCase()) === 0; })[0]; if (k) preCat = String(k.id); }
     var preTit = params && params.get("t") ? params.get("t").slice(0, 80) : "";
-    shell('<p class="muted">Descreva o que você precisa. Profissionais da sua região enviam propostas.</p>' +
+    shell('<p class="muted">Descreva o que você precisa. Profissionais perto de você enviam propostas.</p>' +
       '<form class="card" id="f" novalidate>' +
       '<label for="cat" style="margin-top:0">Tipo de serviço</label><select id="cat"><option value="">Escolha…</option>' + cats.map(function (x) { return '<option value="' + x.id + '">' + e(x.name) + "</option>"; }).join("") + "</select>" +
       '<label for="tit">Título curto</label><input id="tit" maxlength="80" placeholder="Ex.: Trocar chuveiro elétrico">' +
       '<label for="des">Descreva o serviço</label><textarea id="des" maxlength="1000" placeholder="O que precisa ser feito? Tem alguma urgência?"></textarea>' +
-      '<label for="reg">Bairro</label><select id="reg"><option value="">Escolha…</option>' + regions.map(function (x) { return '<option value="' + x.id + '">' + e(x.name) + " — " + e(x.city) + "</option>"; }).join("") + "</select>" +
-      '<p class="muted small" style="margin:6px 0 0">Por enquanto atendemos só estes bairros do piloto. O endereço completo só é liberado ao profissional contratado.</p>' +
+      '<label for="uf">Estado</label><select id="uf">' + UFS.map(function (u) { return '<option' + (u === "ES" ? " selected" : "") + ">" + u + "</option>"; }).join("") + "</select>" +
+      '<label for="cid">Cidade</label><input id="cid" maxlength="60" list="cidl" autocomplete="address-level2" placeholder="Ex.: Serra">' +
+      '<datalist id="cidl">' + cityList.map(function (c2) { return '<option value="' + e(c2) + '">'; }).join("") + "</datalist>" +
+      '<label for="bai">Bairro</label><input id="bai" maxlength="60" autocomplete="off" placeholder="Ex.: Laranjeiras">' +
+      '<p class="muted small" style="margin:6px 0 0">O endereço completo só é liberado ao profissional contratado.</p>' +
       '<label for="rua">Rua</label><input id="rua" maxlength="120" autocomplete="address-line1">' +
       '<div class="row" style="align-items:flex-start;gap:10px"><div style="flex:1"><label for="num">Número</label><input id="num" maxlength="12"></div><div style="flex:2"><label for="comp">Complemento</label><input id="comp" maxlength="60"></div></div>' +
       '<label for="dat">Data desejada (opcional)</label><input id="dat" type="date">' +
@@ -555,16 +573,17 @@
     $("f").onsubmit = async function (ev) {
       ev.preventDefault();
       function bad(m) { $("err").innerHTML = '<div class="banner err" role="alert">' + e(m) + "</div>"; }
-      var cat = Number($("cat").value), reg = regions.filter(function (x) { return String(x.id) === $("reg").value; })[0];
+      var cat = Number($("cat").value), cid = $("cid").value.trim(), bai = $("bai").value.trim();
       var tit = $("tit").value.trim(), des = $("des").value.trim(), rua = $("rua").value.trim();
       if (!cat) return bad("Escolha o tipo de serviço.");
       if (tit.length < 4) return bad("Escreva um título (mínimo de 4 letras).");
       if (des.length < 10) return bad("Descreva melhor o serviço.");
-      if (!reg) return bad("Escolha o bairro.");
+      if (cid.length < 2) return bad("Informe a cidade.");
+      if (bai.length < 2) return bad("Informe o bairro.");
       if (rua.length < 3) return bad("Informe a rua.");
       $("go").disabled = true;
       try {
-        var a = await sb.from("addresses").insert({ user_id: user.id, label: "Pedido", street: rua, number: $("num").value.trim() || null, complement: $("comp").value.trim() || null, neighborhood: reg.name, city: reg.city, state: "ES" }).select("id").single();
+        var a = await sb.from("addresses").insert({ user_id: user.id, label: "Pedido", street: rua, number: $("num").value.trim() || null, complement: $("comp").value.trim() || null, neighborhood: bai, city: cid, state: $("uf").value }).select("id").single();
         if (a.error) throw a.error;
         var q = await sb.from("service_requests").insert({ client_id: user.id, category_id: cat, address_id: a.data.id, title: tit, description: des, desired_date: $("dat").value || null, desired_slot: $("slot").value }).select("id").single();
         if (q.error) throw q.error;
@@ -814,6 +833,8 @@
     }
     if (pro.status === "pending") banner = '<div class="banner">Seu cadastro está em análise pela equipe. Assim que for aprovado, os pedidos da sua região aparecem aqui.</div>';
     if (pro.status === "suspended") banner = '<div class="banner err">Seu cadastro está suspenso. Fale com o suporte do Resolvo Já.</div>' + supportCard();
+    if (pro.other_category) banner += '<div class="banner">Você pediu a categoria <b>' + e(pro.other_category) + '</b>. A equipe vai criá-la em breve e avisa você.</div>';
+    if (pro.other_city && pro.other_neighborhood) banner += '<div class="banner">Você pediu atendimento em <b>' + e(pro.other_neighborhood) + " (" + e(pro.other_city) + ')</b>. A equipe avisa você quando chegarmos lá.</div>';
     if (pro.status !== "approved") return shell(banner, "home", proHead("Início"));
     var mpHtml = await mpConnectHtml();
     var mine = await sb.from("proposals").select("request_id").eq("pro_id", user.id);

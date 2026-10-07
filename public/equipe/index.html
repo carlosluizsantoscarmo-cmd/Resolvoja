@@ -149,6 +149,8 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       load:function(){ state.pros=demo.pros; state.reqs=demo.reqs; state.disputes=demo.disputes; state.payouts=demo.payouts; state.negs=demo.negs; state.cats=demo.cats; state.regs=demo.regs; state.reports=demo.reports; state.ov=demo.ov; state.clients=[]; state.leads=[]; state.orders=[]; return Promise.resolve(); },
       docUrl:function(){ return Promise.reject(new Error('No modo demonstração não há documentos.')); },
       resume:function(){ return Promise.resolve(null); },
+      adopt:function(id){ return Promise.resolve(); },
+      adoptReg:function(id){ return Promise.resolve(); },
       delRemote:function(){ return Promise.resolve(); },
       authHeader:function(){ return Promise.resolve({}); },
       markPaid:function(id){ demo.negs.forEach(function(n){ if(n.request_id===id) n.status='hired'; }); return Promise.resolve(); },
@@ -248,6 +250,8 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       delRemote:function(url){ return api.authHeader().then(function(H){ return fetch(url,{method:'DELETE',headers:H}).then(function(r){ if(!r.ok) throw new Error('Não foi possível excluir.'); }); }); },
       docUrl:function(path){ return sb.storage.from('documentos').createSignedUrl(path,120).then(function(r){ if(r.error||!r.data) throw new Error('Não foi possível abrir o documento.'); return r.data.signedUrl; }); },
       markPaid:function(id){ return sb.rpc('admin_mark_paid',{p_request:id,p_method:'pix'}).then(need); },
+      adopt:function(id){ return sb.rpc('admin_adopt_category',{p_pro:id}).then(need); },
+      adoptReg:function(id){ return sb.rpc('admin_adopt_region',{p_pro:id}).then(need); },
       setPro:function(id,status){ return sb.rpc('set_pro_status',{p_pro:id,p_status:status}).then(need); },
       resolve:function(id,outcome,note){ return sb.rpc('resolve_dispute',{p_dispute:id,p_outcome:outcome,p_note:note}).then(need); },
       payout:function(id,status){ return sb.rpc(status==='paid'?'mark_payout_paid':'mark_payout_failed',{p_payout:id}).then(need); },
@@ -386,7 +390,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       h += list.length ? '<div class="tw"><table><thead><tr><th>Profissional</th><th>Categorias</th><th>Experiência</th><th>Termo</th><th>Documento</th><th>Enviado</th><th>Status</th><th>Ação</th></tr></thead><tbody>' +
         list.map(function(p){
           var pend = p.status==='pending';
-          return '<tr><td><b>'+esc(p.name)+'</b><small>'+esc(p.phone||'')+'</small></td><td>'+esc(p.categories||'')+'</td><td class="num">'+esc(p.years_exp==null?'':p.years_exp+' anos')+'</td>' +
+          return '<tr><td><b>'+esc(p.name)+'</b><small>'+esc(p.phone||'')+'</small></td><td>'+esc(p.categories||'')+(p.other_category?'<small><span class="pill warn">Pediu: '+esc(p.other_category)+'</span> <button class="btn ghost" data-adopt="'+esc(p.user_id)+'">Criar categoria</button></small>':'')+(p.other_city?'<small><span class="pill warn">Região: '+esc(p.other_neighborhood)+' ('+esc(p.other_city)+')</span> <button class="btn ghost" data-adoptreg="'+esc(p.user_id)+'">Criar região</button></small>':'')+'</td><td class="num">'+esc(p.years_exp==null?'':p.years_exp+' anos')+'</td>' +
             '<td>'+(p.accepted_terms?'<span class="pill ok">Aceito</span>':'<span class="pill err">Não aceito</span>')+'</td><td>'+(p.document_path?'<button class="btn ghost" data-doc="'+esc(p.document_path)+'">Ver documento</button>':'<small>sem documento</small>')+'</td><td class="num">'+esc(when(p.created_at))+'</td><td>'+pill(STATUS_PRO,p.status)+'</td>' +
             '<td><div class="acts">' +
               (p.status!=='approved' ? '<button class="btn" data-pro="'+esc(p.user_id)+'" data-to="approved"'+(p.accepted_terms?'':' disabled title="O profissional ainda não aceitou o termo"')+'>Aprovar</button>' : '') +
@@ -470,6 +474,18 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       b.addEventListener('click', function(){
         if(!window.confirm('Você já recebeu o pagamento deste pedido? Isso libera o início do serviço e não pode ser desfeito aqui.')) return;
         b.disabled=true; run(api.markPaid(b.getAttribute('data-paid')), 'Pagamento registrado. Pedido em andamento.');
+      });
+    });
+    Array.prototype.forEach.call(v.querySelectorAll('[data-adopt]'), function(b){
+      b.addEventListener('click', function(){
+        if(!window.confirm('Criar esta categoria e atribuir ao profissional? Ela passa a aparecer para todos no app.')) return;
+        b.disabled=true; run(api.adopt(b.getAttribute('data-adopt')), 'Categoria criada e atribuída');
+      });
+    });
+    Array.prototype.forEach.call(v.querySelectorAll('[data-adoptreg]'), function(b){
+      b.addEventListener('click', function(){
+        if(!window.confirm('Criar esta região e atribuir ao profissional?')) return;
+        b.disabled=true; run(api.adoptReg(b.getAttribute('data-adoptreg')), 'Região criada e atribuída');
       });
     });
     Array.prototype.forEach.call(v.querySelectorAll('[data-delurl]'), function(b){

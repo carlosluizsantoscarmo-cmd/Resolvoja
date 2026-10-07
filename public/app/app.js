@@ -131,6 +131,47 @@
     if (b) b.onclick = function () { installEvt.prompt(); installEvt.userChoice.finally(function () { installEvt = null; }); };
   }
 
+  // ---------- Face ID / digital (passkey) ----------
+  function passkeySupported() { return !!(window.PublicKeyCredential && sb && sb.auth && sb.auth.signInWithPasskey && sb.auth.registerPasskey); }
+  function passkeyLoginHtml() {
+    if (!passkeySupported()) return "";
+    return '<div class="card" style="margin-top:14px;text-align:center"><button type="button" class="ghost full" id="pk">Entrar com Face ID ou digital</button>' +
+      '<p class="muted small" style="margin:8px 0 0">Para usar, entre uma vez com e-mail e senha e ative em Perfil.</p><div id="pkerr"></div></div>';
+  }
+  function passkeyLoginBind() {
+    var b = $("pk"); if (!b) return;
+    b.onclick = async function () {
+      b.disabled = true; $("pkerr").innerHTML = "";
+      try {
+        var r = await sb.auth.signInWithPasskey();
+        if (r && r.error) throw r.error;
+      } catch (x) {
+        b.disabled = false;
+        var cancelled = x && /cancel|abort|NotAllowed/i.test(String(x.name || "") + String(x.message || ""));
+        $("pkerr").innerHTML = '<div class="banner err" role="alert" style="margin-top:10px">' + e(cancelled ? "Entrada cancelada." : "Não foi possível entrar com Face ID. Entre com e-mail e senha.") + "</div>";
+      }
+    };
+  }
+  function passkeyCardHtml() {
+    if (!passkeySupported()) return "";
+    return '<div class="card"><b>Entrar com Face ID ou digital</b><p class="muted small" style="margin:6px 0 12px">Ative neste aparelho e entre mais rápido, sem digitar a senha.</p><button type="button" class="ghost full" id="pkreg">Ativar Face ID neste aparelho</button></div>';
+  }
+  function passkeyCardBind() {
+    var b = $("pkreg"); if (!b) return;
+    b.onclick = async function () {
+      b.disabled = true;
+      try {
+        var r = await sb.auth.registerPasskey();
+        if (r && r.error) throw r.error;
+        toast("Face ID ativado neste aparelho. Na próxima vez, toque em Entrar com Face ID.");
+      } catch (x) {
+        var cancelled = x && /cancel|abort|NotAllowed/i.test(String(x.name || "") + String(x.message || ""));
+        toast(cancelled ? "Ativação cancelada." : "Não foi possível ativar o Face ID neste aparelho.");
+      }
+      b.disabled = false;
+    };
+  }
+
   function screenAuth(mode) {
     stopTimer();
     mode = mode || "login";
@@ -150,10 +191,10 @@
           '<p id="prohint" class="banner" hidden>Profissional: depois de criar a conta e entrar, você escolhe os <b>serviços</b>, os <b>bairros</b>, informa a <b>experiência</b> e envia uma <b>foto do RG ou CNH</b> na próxima tela. Deixe o documento à mão.</p>' +
       '<label style="font-weight:500;display:flex;gap:8px;align-items:flex-start;margin-top:16px"><input id="ok" type="checkbox" style="width:auto;margin-top:4px"><span>Li e aceito os <a href="/termos.html" target="_blank" rel="noopener">Termos</a> e a <a href="/privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>.</span></label>'
         : "") +
-      '<div id="err"></div><button class="full" id="go" type="submit">' + (signup ? "Criar conta" : "Entrar") + "</button></form>" + (signup ? "" : '<p class="center" style="margin:14px 0 0"><button type="button" class="ghost slim" id="forgot">Esqueci minha senha</button></p>') + installBlock(),
+      '<div id="err"></div><button class="full" id="go" type="submit">' + (signup ? "Criar conta" : "Entrar") + "</button></form>" + (signup ? "" : '<p class="center" style="margin:14px 0 0"><button type="button" class="ghost slim" id="forgot">Esqueci minha senha</button></p>') + (signup ? "" : passkeyLoginHtml()) + installBlock(),
       signup ? "Criar conta" : "Entrar", "Peça serviços e receba propostas de profissionais perto de você."
     );
-    bindInstall();
+    bindInstall(); passkeyLoginBind();
     Array.prototype.forEach.call(document.querySelectorAll('input[name="role"]'), function (r) {
       r.onchange = function () { var h = $("prohint"); if (h) h.hidden = document.querySelector('input[name="role"]:checked').value !== "pro"; };
     });
@@ -381,10 +422,10 @@
     var mpHtml = isPro && pro && pro.status === "approved" ? await mpConnectHtml() : "";
     shell('<div class="card"><div class="row" style="justify-content:flex-start;gap:14px">' + avatar(profile.name, 0) + '<div><b>' + e(profile.name) + '</b><br><span class="muted small">' + e(user.email || "") + "<br>" + e(profile.phone || "") + "</span></div></div>" +
       '<p style="margin:12px 0 0">' + (isPro ? "Profissional " + (pro && pro.status === "approved" ? '<span class="pill ok">aprovado</span>' : pro && pro.status === "suspended" ? '<span class="pill err">suspenso</span>' : '<span class="pill warn">em análise</span>') : "Cliente") + "</p></div>" +
-      mpHtml + supportCard() + installBlock() +
+      mpHtml + supportCard() + passkeyCardHtml() + installBlock() +
       '<p class="small center muted" style="margin-top:18px"><a href="/termos.html" target="_blank" rel="noopener">Termos</a> · <a href="/privacidade.html" target="_blank" rel="noopener">Privacidade</a></p>' +
       '<button class="danger full" id="out" type="button">Sair da conta</button>', "perfil", topbar("Perfil"));
-    $("out").onclick = signOut; bindInstall(); mpConnectBind();
+    $("out").onclick = signOut; bindInstall(); mpConnectBind(); passkeyCardBind();
   }
 
   // ---------- chat ----------
@@ -859,7 +900,7 @@
     var mpRes = new URLSearchParams(location.search).get("mp");
     if (mpRes) { try { history.replaceState(null, "", location.pathname + location.hash); } catch (x) {} }
     if (!CFG.url || !CFG.anonKey || !window.supabase) { sb = null; return route(); }
-    sb = window.supabase.createClient(CFG.url, CFG.anonKey, { auth: { persistSession: true, autoRefreshToken: true } });
+    sb = window.supabase.createClient(CFG.url, CFG.anonKey, { auth: { persistSession: true, autoRefreshToken: true, experimental: { passkey: true } } });
     var started = false;
     sb.auth.onAuthStateChange(function (ev, session) {
       if (ev === "PASSWORD_RECOVERY") { recovering = true; user = session ? session.user : user; if (started) screenNewPassword(); return; }

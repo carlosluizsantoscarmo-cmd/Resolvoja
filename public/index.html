@@ -263,54 +263,6 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
    <a class="btn" href="/app/#/?modo=cadastro">Criar conta grátis</a>
    <a class="btn line" href="/app/">Já tenho conta · Entrar</a>
   </div>
-  <div class="sec-h" style="margin-inline:auto;text-align:center"><h2>Mora em outra cidade?</h2><p>Entre na lista de espera e avisamos pelo WhatsApp quando o Resolvo Já chegar na sua região.</p></div>
-  <div class="form-card">
-   <div class="seg" role="tablist" aria-label="Tipo de cadastro">
-    <button type="button" role="tab" id="tab-cliente" aria-selected="true" data-kind="cliente">Quero contratar</button>
-    <button type="button" role="tab" id="tab-pro" aria-selected="false" data-kind="pro">Sou profissional</button>
-   </div>
-   <form id="lead" novalidate>
-    <div class="fields">
-     <div><label class="l" for="nome">Nome</label><input id="nome" type="text" autocomplete="name" required></div>
-     <div><label class="l" for="zap">WhatsApp com DDD</label><input id="zap" type="tel" inputmode="tel" autocomplete="tel" placeholder="(27) 9 0000-0000" required></div>
-     <div><label class="l" for="bairro">Bairro</label><input id="bairro" type="text" autocomplete="address-level3" placeholder="Ex.: Laranjeiras" required></div>
-     <div><label class="l" for="cidade">Cidade</label><input id="cidade" type="text" list="cidades" autocomplete="address-level2" placeholder="Ex.: Serra" required>
-      <datalist id="cidades"><option value="Serra"><option value="Vitória"><option value="Vila Velha"><option value="Cariacica"><option value="Viana"><option value="Guarapari"></datalist></div>
-     <div><label class="l" for="uf">Estado</label>
-      <select id="uf"><option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option><option>CE</option><option>DF</option><option selected>ES</option><option>GO</option><option>MA</option><option>MT</option><option>MS</option><option>MG</option><option>PA</option><option>PB</option><option>PR</option><option>PE</option><option>PI</option><option>RJ</option><option>RN</option><option>RS</option><option>RO</option><option>RR</option><option>SC</option><option>SP</option><option>SE</option><option>TO</option></select></div>
-     <div class="full" id="box-cli">
-      <span class="lbl" id="l-cli">Que serviço você costuma precisar?</span>
-      <div class="pills" role="group" aria-labelledby="l-cli">
-       <label class="pill"><input type="checkbox" name="cat-cli" value="Eletricista"><span>Eletricista</span></label>
-       <label class="pill"><input type="checkbox" name="cat-cli" value="Encanador"><span>Encanador</span></label>
-       <label class="pill"><input type="checkbox" name="cat-cli" value="Montador"><span>Montador</span></label>
-       <label class="pill"><input type="checkbox" name="cat-cli" value="Pintor"><span>Pintor</span></label>
-       <label class="pill"><input type="checkbox" name="cat-cli" value="Diarista"><span>Diarista</span></label>
-       <label class="pill"><input type="checkbox" name="cat-cli" value="Fretes"><span>Fretes</span></label>
-      </div>
-     </div>
-     <div class="full" id="box-pro" hidden>
-      <span class="lbl" id="l-pro">O que você faz?</span>
-      <div class="pills" role="group" aria-labelledby="l-pro">
-       <label class="pill"><input type="checkbox" name="cat-pro" value="Eletricista"><span>Eletricista</span></label>
-       <label class="pill"><input type="checkbox" name="cat-pro" value="Encanador"><span>Encanador</span></label>
-       <label class="pill"><input type="checkbox" name="cat-pro" value="Montador"><span>Montador</span></label>
-       <label class="pill"><input type="checkbox" name="cat-pro" value="Pintor"><span>Pintor</span></label>
-       <label class="pill"><input type="checkbox" name="cat-pro" value="Diarista"><span>Diarista</span></label>
-       <label class="pill"><input type="checkbox" name="cat-pro" value="Fretes"><span>Fretes</span></label>
-      </div>
-     </div>
-     <div class="full" id="box-exp" hidden><label class="l" for="exp">Há quanto tempo trabalha na área?</label>
-      <select id="exp"><option>Menos de 1 ano</option><option>1 a 3 anos</option><option selected>3 a 10 anos</option><option>Mais de 10 anos</option></select></div>
-     <div class="full"><label class="l" for="obs">Quer contar mais? (opcional)</label><textarea id="obs" placeholder="Ex.: preciso de montagem de móveis todo mês"></textarea></div>
-     <div class="full"><label class="chk" for="lgpd"><input id="lgpd" type="checkbox"><span>Autorizo o Resolvo Já a usar meus dados só para me avisar quando chegar na minha região, conforme a LGPD. Leia a <a href="/privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>. Posso pedir a exclusão a qualquer momento.</span></label></div>
-    </div>
-    <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true"><label>Não preencha este campo<input type="text" id="website" tabindex="-1" autocomplete="off"></label></div>
-    <div id="cf-turnstile" style="margin-top:18px"></div>
-    <div style="margin-top:22px"><button class="btn" type="submit" id="send" style="width:100%">Entrar na lista de espera</button></div>
-    <div id="out" role="status" aria-live="polite"></div>
-   </form>
-  </div>
 
 
  </div>
@@ -324,7 +276,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
    <details><summary>O que é a verificação de profissional?</summary><p>Conferimos seus dados cadastrais e você recebe o selo "Profissional verificado". Ela ajuda a passar confiança, mas não garante a quantidade de pedidos.</p></details>
    <details><summary>Posso pedir o dinheiro de volta?</summary><p>Sim. Você tem 7 dias corridos depois do pagamento para desistir e receber o reembolso integral. Veja os <a href="/termos.html">Termos e reembolso</a>.</p></details>
    <details><summary>O aplicativo já está aberto?</summary><p>Sim, está aberto para todo o Brasil. Crie sua conta em <a href="/app/#/?modo=cadastro">resolvoja.app.br/app</a>. Quanto mais profissionais na sua cidade, mais rápido chegam as propostas.</p></details>
-   <details><summary>Meus dados estão seguros?</summary><p>Usamos seus dados só para o funcionamento do serviço e, na lista de espera, para avisar quando chegarmos na sua cidade. Você pode pedir a exclusão quando quiser. Pagamentos são feitos no Mercado Pago, e não guardamos dados de cartão. Leia a <a href="/privacidade.html">Política de Privacidade</a>.</p></details>
+   <details><summary>Meus dados estão seguros?</summary><p>Usamos seus dados só para o funcionamento do serviço. Você pode pedir a exclusão quando quiser. Pagamentos são feitos no Mercado Pago, e não guardamos dados de cartão. Leia a <a href="/privacidade.html">Política de Privacidade</a>.</p></details>
    <details><summary>Onde vocês atendem?</summary><p>Em todo o Brasil. Você informa estado, cidade e bairro no pedido e os profissionais da sua região enviam propostas. Estamos crescendo cidade por cidade, então em algumas ainda pode demorar mais para chegar a primeira proposta.</p></details>
   </div>
  </div>
@@ -335,52 +287,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
  <div class="wrap"><span><b>Resolvo Já</b> · Conectando quem precisa com quem sabe fazer.</span><span><a href="/termos.html" style="color:inherit">Termos e reembolso</a> · <a href="/privacidade.html" style="color:inherit">Política de Privacidade</a> · <a href="mailto:contato@resolvoja.app.br" style="color:inherit">contato@resolvoja.app.br</a> · Serra, Espírito Santo</span></div>
 </footer>
 
-<script>
-(function(){
-  var kind='cliente';
-  var $=function(id){return document.getElementById(id)};
-  function setKind(k){
-    kind=k;
-    $('tab-cliente').setAttribute('aria-selected',String(k==='cliente'));
-    $('tab-pro').setAttribute('aria-selected',String(k==='pro'));
-    $('box-cli').hidden=k!=='cliente';
-    $('box-pro').hidden=k!=='pro';
-    $('box-exp').hidden=k!=='pro';
-    $('send').textContent=k==='pro'?'Entrar na lista de espera (profissional)':'Entrar na lista de espera';
-    $('obs').placeholder=k==='pro'?'Ex.: atendo à noite e aos sábados':'Ex.: preciso de montagem de móveis todo mês';
-  }
-  document.querySelectorAll('[data-kind]').forEach(function(b){b.addEventListener('click',function(){setKind(b.dataset.kind)})});
-  document.querySelectorAll('[data-pick]').forEach(function(a){a.addEventListener('click',function(){setKind(a.dataset.pick)})});
 
-  function show(cls,text){$('out').innerHTML='<div class="msg '+cls+'"></div>';$('out').firstChild.textContent=text}
-
-  $('lead').addEventListener('submit',function(e){
-    e.preventDefault();
-    var nome=$('nome').value.trim(),zap=$('zap').value.trim(),bairro=$('bairro').value.trim();
-    var digits=zap.replace(/\D/g,'');
-    if(!nome){show('err','Informe seu nome.');$('nome').focus();return}
-    if(digits.length<10||digits.length>13){show('err','Confira o WhatsApp. Use o DDD, por exemplo (27) 9 0000-0000.');$('zap').focus();return}
-    if(!bairro){show('err','Informe o seu bairro.');$('bairro').focus();return}
-    if(!$('cidade').value.trim()){show('err','Informe a sua cidade.');$('cidade').focus();return}
-    if(!$('lgpd').checked){show('err','Marque a autorização para continuar.');$('lgpd').focus();return}
-    var cats=Array.prototype.map.call(document.querySelectorAll('input[name="cat-'+(kind==='pro'?'pro':'cli')+'"]:checked'),function(i){return i.value});
-    if(kind==='pro'&&!cats.length){show('err','Escolha pelo menos uma categoria em que você trabalha.');return}
-    var rec={tipo:kind,nome:nome,whatsapp:zap,bairro:bairro,cidade:$('cidade').value.trim(),uf:$('uf').value,categorias:cats,obs:$('obs').value.trim().slice(0,500),lgpd:true,website:$('website').value};
-    if(window.RJ&&RJ.enabled()){if(!RJ.token()){show('err','Aguarde a verificação anti-robô terminar e tente de novo.');return}rec.turnstile=RJ.token()}
-    if(kind==='pro')rec.experiencia=$('exp').value;
-    var btn=$('send');btn.disabled=true;show('info','Enviando seu cadastro...');
-    fetch('/api/lead',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(rec)})
-      .then(function(r){return r.json().catch(function(){return {}}).then(function(d){return {ok:r.ok,d:d}})})
-      .then(function(res){
-        btn.disabled=false;if(window.RJ)RJ.reset();
-        if(!res.ok){show('err',res.d.error||'Não foi possível enviar agora. Tente de novo em instantes.');return}
-        $('lead').reset();setKind(kind);
-        show('ok',kind==='pro'?'Cadastro recebido. Vamos chamar você no WhatsApp para a verificação.':'Você está na lista. Avisamos no WhatsApp quando abrir na sua região.');
-      })
-      .catch(function(){btn.disabled=false;show('err','Sem conexão. Confira a internet e tente de novo.')});
-  });
-})();
-</script>
 
 <script src="/config.js"></script>
 <script src="/site.js"></script>

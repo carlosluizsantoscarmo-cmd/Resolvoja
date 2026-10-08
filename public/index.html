@@ -176,6 +176,15 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
   .prop.best{animation:pop .5s .3s both ease-out}
   @keyframes pop{from{transform:scale(.97)}to{transform:none}}
 }
+
+.catnav{background:var(--surface);border-block:1px solid var(--line)}
+.catnav .wrap{padding-block:0}
+.catnav ul{list-style:none;margin:0;padding:14px 0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+.catnav a{display:flex;flex-direction:column;align-items:center;gap:8px;width:96px;flex:none;text-decoration:none;color:var(--muted);font-size:14px;line-height:1.2;text-align:center;padding:6px 4px;border-radius:12px}
+.catnav a:hover,.catnav a:focus-visible{color:var(--text);background:var(--soft)}
+.catnav .ci{position:relative;width:48px;height:48px;display:grid;place-items:center;color:var(--text)}
+.catnav .ci::before{content:"";position:absolute;right:2px;top:6px;width:26px;height:26px;border-radius:50%;background:var(--sun);opacity:.85}
+.catnav .ci svg{position:relative}
 </style>
 
 <header class="hero">
@@ -209,6 +218,10 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
  </div>
 </header>
 
+<nav class="catnav" id="categorias" aria-label="Categorias de serviço" hidden>
+ <div class="wrap"><ul id="catlist"></ul></div>
+</nav>
+
 <main>
 <section id="como">
  <div class="wrap">
@@ -218,10 +231,6 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
    <li><h3>Compare as propostas</h3><p>Profissionais da sua região respondem com preço, prazo e horário. Veja o perfil de cada profissional e, com o tempo, as avaliações de outros clientes.</p></li>
    <li><h3>Contrate e acompanhe</h3><p>Pague pelo app com Pix ou cartão, converse pelo chat e confirme quando o serviço terminar. No cartão, o valor fica reservado até a sua confirmação. No Pix, o pagamento é na hora e, se houver problema, você abre uma disputa pelo app.</p></li>
   </ol>
-  <div class="cats" aria-label="Categorias do piloto">
-   <span class="place">Eletricista</span><span class="place">Encanador</span><span class="place">Montador de móveis</span>
-   <span class="place soon">Pintor · em breve</span><span class="place soon">Diarista · em breve</span><span class="place soon">Fretes · em breve</span>
-  </div>
  </div>
 </section>
 
@@ -313,6 +322,37 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
       var cat=(x.categories&&x.categories[0])?'&c='+encodeURIComponent(x.categories[0]):'';return '<a class="prop" style="text-decoration:none;color:inherit" href="/app/#/?modo=cadastro&pro='+encodeURIComponent(x.id||'')+cat+'"><span class="av" style="background:'+cores[i%cores.length]+'">'+ini+'</span><div class="t"><b>'+esc(x.display_name)+'</b><span>'+esc((x.categories||[]).join(', ')||'Profissional')+'</span>'+(meta.length?'<span style="display:block">'+meta.join(' · ')+'</span>':'')+'<span style="display:block;margin-top:6px;font-weight:700;color:var(--brand)">Pedir orçamento →</span></div></a>';
     }).join('');
     document.getElementById('vitrine').hidden=false;
+  }).catch(function(){});
+})();
+</script>
+<script>
+(function(){
+  var C=window.RJ_APP; if(!C||!C.url||!C.anonKey||!window.fetch) return;
+  function esc(t){return String(t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  var I={
+   eletric:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+   encan:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+   montad:'<path d="m14 4 6 6-3 3-6-6z"/><path d="m12 8-8 8 4 4 8-8"/>',
+   pedrei:'<path d="M3 5h18v14H3zM3 12h18M9 5v7M15 12v7"/>',
+   pintor:'<path d="M5 4h12v5H5zM17 6.5h3v4h-8v4"/><path d="M11 14.5v6"/>',
+   diaris:'<path d="m14 3-3 8"/><path d="M8 11h8l2 10H6z"/>',
+   frete:'<path d="M2 7h11v9H2zM13 10h4l3 3v3h-7"/><circle cx="6.5" cy="18.5" r="1.8"/><circle cx="16.5" cy="18.5" r="1.8"/>',
+   chave:'<circle cx="8" cy="8" r="4"/><path d="m11 11 9 9M16 16l2-2M13 13l2-2"/>',
+   jardin:'<path d="M5 19C5 9 11 4 20 4c0 9-5 15-15 15zM5 19l8-8"/>',
+   'ar-con':'<path d="M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7"/>',
+   serralh:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>',
+   vidrac:'<path d="M4 3h16v18H4zM12 3v18M4 12h16"/>',
+   def:'<path d="m14.7 6.3 3 3-8.4 8.4-4 1 1-4zM13 8l3 3"/>'
+  };
+  function key(n){n=n.toLowerCase();for(var k in I){if(k!=='def'&&n.indexOf(k)===0)return k}
+    if(/^ar\b|ar-cond|ar cond/.test(n))return 'ar-con';return 'def'}
+  fetch(C.url+'/rest/v1/rpc/public_categories',{method:'POST',headers:{apikey:C.anonKey,Authorization:'Bearer '+C.anonKey,'Content-Type':'application/json'},body:'{}'})
+   .then(function(r){return r.ok?r.json():[]}).then(function(l){
+    if(!Array.isArray(l)||!l.length) return;
+    document.getElementById('catlist').innerHTML=l.map(function(x){
+      return '<li><a href="/app/#/?modo=cadastro&c='+encodeURIComponent(x.name)+'"><span class="ci"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+I[key(x.name)]+'</svg></span>'+esc(x.name)+'</a></li>';
+    }).join('');
+    document.getElementById('categorias').hidden=false;
   }).catch(function(){});
 })();
 </script>

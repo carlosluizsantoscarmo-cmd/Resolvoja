@@ -202,6 +202,16 @@ html{scroll-padding-top:150px}
 .catnav button:hover,.catnav button:focus-visible,.catnav button[aria-expanded="true"]{color:var(--text);background:var(--soft)}
 .catnav button:focus-visible{outline:2px solid var(--brand)}
 @media(max-width:720px){.catnav button{width:90px;font-size:13px}.mega-grid{grid-template-columns:1fr 1fr;gap:4px 16px}.mega a{font-size:14.5px}}
+
+.quem{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-bottom:18px}
+.quem .box{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:24px;min-width:0}
+.quem .box h3{font-size:20px;margin-bottom:8px}
+.quem .box p{color:var(--muted);font-size:17px}
+.vals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;list-style:none;margin:0;padding:0}
+.vals li{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px 20px;min-width:0}
+.vals b{display:block;font-size:17.5px;margin-bottom:4px}
+.vals span{color:var(--muted);font-size:15.5px}
+@media(max-width:860px){.quem{grid-template-columns:minmax(0,1fr)}.vals{grid-template-columns:minmax(0,1fr)}}
 </style>
 
 <div class="topstick">
@@ -211,6 +221,7 @@ html{scroll-padding-top:150px}
    <span class="sp"></span>
    <a class="l" href="#como">Como funciona</a>
    <a class="l" href="#profissionais">Para profissionais</a>
+   <a class="l" href="#quem-somos">Quem somos</a>
    <a class="l" href="#faq">Perguntas</a>
    <a class="btn sun" style="padding:10px 16px;font-size:15px" href="/app/">Entrar ou cadastre-se</a>
   </nav>
@@ -301,6 +312,23 @@ html{scroll-padding-top:150px}
   </div>
 
 
+ </div>
+</section>
+<section class="alt" id="quem-somos">
+ <div class="wrap">
+  <div class="sec-h"><h2>Quem somos</h2><p>O Resolvo Já é o app que traz o profissional certo até você.</p></div>
+  <div class="quem">
+   <div class="box"><h3>Missão</h3><p>Aproximar quem precisa de um serviço de quem sabe fazer, com preço, prazo e pagamento claros, para que contratar e trabalhar sejam simples e seguros.</p></div>
+   <div class="box"><h3>Visão</h3><p>Ser o aplicativo de referência no Brasil para contratar e oferecer serviços do dia a dia, em cada bairro e cidade.</p></div>
+  </div>
+  <ul class="vals" aria-label="Valores">
+   <li><b>Clareza</b><span>Preço, prazo e regras à vista, sem surpresa para ninguém.</span></li>
+   <li><b>Confiança</b><span>Pagamento seguro, perfis conferidos pela nossa equipe e avaliações dos clientes.</span></li>
+   <li><b>Respeito ao profissional</b><span>Ele define o próprio preço e fica com 90% do valor do serviço.</span></li>
+   <li><b>Simplicidade</b><span>Pedir ou receber um pedido em poucos toques, direto no celular.</span></li>
+   <li><b>Proximidade</b><span>Conectar pessoas da mesma região e fortalecer o trabalho local.</span></li>
+   <li><b>Transparência</b><span>Cuidar bem dos dados e explicar com franqueza como o Resolvo Já funciona.</span></li>
+  </ul>
  </div>
 </section>
 <section id="faq">

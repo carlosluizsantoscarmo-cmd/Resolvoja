@@ -67,6 +67,17 @@
   };
   function icon(n, s) { s = s || 22; return '<svg class="ic" width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[n] || "") + "</svg>"; }
   function catIcon(name) { var n = String(name || "").toLowerCase(); return /eletric/.test(n) ? "bolt" : /encan|hidr/.test(n) ? "drop" : /pintor/.test(n) ? "brush" : /diarista|limpez/.test(n) ? "broom" : /frete|mudan/.test(n) ? "truck" : "wrench"; }
+  // Categorias ativas com departamento (se a coluna ainda não existir, cai para o modo simples).
+  async function loadCats() {
+    var c = await sb.from("categories").select("id,name,dept,section,dept_order").eq("active", true).order("dept_order").order("name");
+    if (c.error) c = await sb.from("categories").select("id,name").eq("active", true).order("name");
+    return c.data || [];
+  }
+  function catGroups(list) {
+    var g = [];
+    list.forEach(function (x) { var n = x.dept || "Outros serviços", o = g.filter(function (a) { return a.name === n; })[0]; if (!o) { o = { name: n, items: [] }; g.push(o); } o.items.push(x); });
+    return g;
+  }
   function initials(n) { var p = String(n || "?").trim().split(/\s+/); return ((p[0] || "?").charAt(0) + (p[1] ? p[1].charAt(0) : "")).toUpperCase(); }
   var AVC = ["", "g", "o", "p"];
   function avatar(n, i) { return '<span class="av ' + AVC[(i || 0) % 4] + '" aria-hidden="true">' + e(initials(n)) + "</span>"; }
@@ -295,11 +306,11 @@
 
   async function screenProSetup() {
     loading();
-    var c = await sb.from("categories").select("id,name").eq("active", true).order("name");
+    var c = { data: await loadCats() };
     var rg = await sb.from("regions").select("id,city,name").eq("active", true).order("city").order("name");
     cats = c.data || []; regions = rg.data || [];
     plain('<form class="card" id="f" novalidate>' +
-      '<label>O que você faz?</label><div class="chips">' + cats.map(function (x) { return '<label><input type="checkbox" name="cat" value="' + x.id + '"> ' + e(x.name) + "</label>"; }).join("") + "</div>" +
+      '<label>O que você faz?</label><div style="max-height:46vh;overflow:auto;padding-right:4px">' + catGroups(cats).map(function (g) { return '<div class="muted small" style="margin:10px 0 4px;font-weight:700">' + e(g.name) + '</div><div class="chips">' + g.items.map(function (x) { return '<label><input type="checkbox" name="cat" value="' + x.id + '"> ' + e(x.name) + "</label>"; }).join("") + "</div>"; }).join("") + "</div>" +
       '<label for="outra" style="margin-top:14px">Sua profissão não está na lista? (opcional)</label><input id="outra" maxlength="60" placeholder="Ex.: Fotógrafo" autocomplete="off"><p class="muted small" style="margin:6px 0 0">Escreva aqui e a equipe cria a categoria para você.</p>' +
       '<label>Onde você atende?</label><div class="chips">' + regions.map(function (x) { return '<label><input type="checkbox" name="reg" value="' + x.id + '"> ' + e(x.name) + " (" + e(x.city) + ")</label>"; }).join("") + "</div>" +
       '<label style="margin-top:14px">Seu bairro não está na lista? (opcional)</label><div style="display:flex;gap:10px"><input id="ocity" maxlength="60" placeholder="Cidade" aria-label="Cidade" autocomplete="off"><input id="onei" maxlength="60" placeholder="Bairro" aria-label="Bairro" autocomplete="off"></div><p class="muted small" style="margin:6px 0 0">Se você atende em outro lugar, escreva aqui. Avisamos quando chegarmos lá.</p>' +
@@ -520,7 +531,7 @@
 
   async function clientHome() {
     var d = await clientRequests(), list = d.list;
-    var c = await sb.from("categories").select("id,name").eq("active", true).order("name");
+    var c = { data: await loadCats() };
     var quick = [["Chuveiro queimou", "eletric"], ["Torneira pingando", "encan"], ["Montar guarda-roupa", "montad"]];
     var first = profile.name.split(" ")[0];
     var head = '<div class="hero"><div class="hrow"><div><small>Serviço em</small><span class="loc">' + icon("pin", 18) + 'Todo o Brasil</span></div><span class="hello">Olá, ' + e(first) + "</span></div>" +
@@ -529,6 +540,9 @@
       '<div class="chips-h">' + quick.map(function (q) { return '<a href="#/novo?t=' + encodeURIComponent(q[0]) + "&c=" + q[1] + '">' + e(q[0]) + "</a>"; }).join("") + "</div>" +
       '<a class="btn sun full" href="#/novo">' + icon("plus", 20) + "Pedir orçamento</a></div>";
     var cs = c.data || [];
+    var POP = ["Eletricista", "Encanador", "Montador de móveis", "Pintor", "Diarista", "Pedreiro", "Fretes e mudanças", "Chaveiro", "Jardineiro", "Instalação de ar-condicionado", "Marido de aluguel", "Mecânico"];
+    var pop = POP.map(function (n) { return cs.filter(function (x) { return x.name === n; })[0]; }).filter(Boolean);
+    if (pop.length >= 4) cs = pop;
     var body = '<div class="section"><h2>Meus pedidos</h2>' + (list.length > 3 ? '<a href="#/pedidos">Ver todos</a>' : "") + "</div>" +
       (list.length ? list.slice(0, 3).map(function (x) { return reqCard(x, d.counts[x.id] || 0); }).join("") : '<div class="empty">Você ainda não fez nenhum pedido.<br>Toque em <b>Pedir orçamento</b> para começar.</div>') +
       (cs.length ? '<div class="section"><h2>Categorias</h2></div><div class="catgrid">' + cs.map(function (x) {
@@ -544,7 +558,7 @@
   }
 
   async function clientNew(params) {
-    var c = await sb.from("categories").select("id,name").eq("active", true).order("name");
+    var c = { data: await loadCats() };
     var rg = await sb.from("regions").select("id,city,name").eq("active", true).order("city").order("name");
     cats = c.data || []; regions = rg.data || [];
     var UFS = ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
@@ -560,7 +574,7 @@
     }
     shell((targetId ? '<div class="banner ok">Você está pedindo um orçamento para <b>' + e(targetName) + "</b>. Ele será avisado primeiro.</div>" : "") + '<p class="muted">Descreva o que você precisa. Profissionais perto de você enviam propostas.</p>' +
       '<form class="card" id="f" novalidate>' +
-      '<label for="cat" style="margin-top:0">Tipo de serviço</label><select id="cat"><option value="">Escolha…</option>' + cats.map(function (x) { return '<option value="' + x.id + '">' + e(x.name) + "</option>"; }).join("") + "</select>" +
+      '<label for="cat" style="margin-top:0">Tipo de serviço</label><select id="cat"><option value="">Escolha…</option>' + catGroups(cats).map(function (g) { return '<optgroup label="' + e(g.name) + '">' + g.items.map(function (x) { return '<option value="' + x.id + '">' + e(x.name) + "</option>"; }).join("") + "</optgroup>"; }).join("") + "</select>" +
       '<label for="tit">Título curto</label><input id="tit" maxlength="80" placeholder="Ex.: Trocar chuveiro elétrico">' +
       '<label for="des">Descreva o serviço</label><textarea id="des" maxlength="1000" placeholder="O que precisa ser feito? Tem alguma urgência?"></textarea>' +
       '<label for="uf">Estado</label><select id="uf">' + UFS.map(function (u) { return '<option' + (u === "ES" ? " selected" : "") + ">" + u + "</option>"; }).join("") + "</select>" +

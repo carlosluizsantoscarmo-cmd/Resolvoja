@@ -179,7 +179,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
 
 .catnav{background:var(--surface);border-block:1px solid var(--line)}
 .catnav .wrap{padding-block:0}
-.catnav ul{list-style:none;margin:0;padding:14px 0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+.catnav ul{list-style:none;margin:0;padding:14px 0;display:flex;gap:2px;justify-content:safe center;overflow-x:auto;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
 .catnav a{display:flex;flex-direction:column;align-items:center;gap:8px;width:96px;flex:none;text-decoration:none;color:var(--muted);font-size:14px;line-height:1.2;text-align:center;padding:6px 4px;border-radius:12px}
 .catnav a:hover,.catnav a:focus-visible{color:var(--text);background:var(--soft)}
 .catnav .ci{position:relative;width:48px;height:48px;display:grid;place-items:center;color:var(--text)}
@@ -192,6 +192,16 @@ html{scroll-padding-top:150px}
 .navbar .nav{padding-block:12px}
 .topstick .catnav{border-top:0}
 @media(max-width:720px){html{scroll-padding-top:170px}.catnav a{width:84px;font-size:13px}.catnav ul{padding:8px 0}.catnav .ci{width:42px;height:42px}}
+
+.mega{position:absolute;left:0;right:0;top:100%;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 18px 30px rgba(13,18,48,.16);max-height:68vh;overflow:auto}
+.mega-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px 28px;padding:22px 0 26px}
+.mega h3{font:800 17px var(--f-display,inherit);margin:0 0 8px;color:var(--text)}
+.mega a{display:block;padding:7px 0;color:var(--muted);text-decoration:none;font-size:15.5px}
+.mega a:hover,.mega a:focus-visible{color:var(--brand);text-decoration:underline}
+.catnav button{all:unset;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:8px;width:88px;flex:none;cursor:pointer;color:var(--muted);font-size:14px;line-height:1.2;text-align:center;padding:6px 4px;border-radius:12px}
+.catnav button:hover,.catnav button:focus-visible,.catnav button[aria-expanded="true"]{color:var(--text);background:var(--soft)}
+.catnav button:focus-visible{outline:2px solid var(--brand)}
+@media(max-width:720px){.catnav button{width:90px;font-size:13px}.mega-grid{grid-template-columns:1fr 1fr;gap:4px 16px}.mega a{font-size:14.5px}}
 </style>
 
 <div class="topstick">
@@ -208,6 +218,7 @@ html{scroll-padding-top:150px}
 <nav class="catnav" id="categorias" aria-label="Categorias de serviço" hidden>
  <div class="wrap"><ul id="catlist"></ul></div>
 </nav>
+ <div class="mega" id="mega" hidden role="region" aria-label="Serviços da categoria"><div class="wrap"><div class="mega-grid" id="mega-grid"></div></div></div>
 </div>
 
 <header class="hero">
@@ -341,29 +352,42 @@ html{scroll-padding-top:150px}
   var C=window.RJ_APP; if(!C||!C.url||!C.anonKey||!window.fetch) return;
   function esc(t){return String(t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   var I={
-   eletric:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
-   encan:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
-   montad:'<path d="m14 4 6 6-3 3-6-6z"/><path d="m12 8-8 8 4 4 8-8"/>',
-   pedrei:'<path d="M3 5h18v14H3zM3 12h18M9 5v7M15 12v7"/>',
-   pintor:'<path d="M5 4h12v5H5zM17 6.5h3v4h-8v4"/><path d="M11 14.5v6"/>',
-   diaris:'<path d="m14 3-3 8"/><path d="M8 11h8l2 10H6z"/>',
-   frete:'<path d="M2 7h11v9H2zM13 10h4l3 3v3h-7"/><circle cx="6.5" cy="18.5" r="1.8"/><circle cx="16.5" cy="18.5" r="1.8"/>',
-   chave:'<circle cx="8" cy="8" r="4"/><path d="m11 11 9 9M16 16l2-2M13 13l2-2"/>',
-   jardin:'<path d="M5 19C5 9 11 4 20 4c0 9-5 15-15 15zM5 19l8-8"/>',
-   'ar-con':'<path d="M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7"/>',
-   serralh:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>',
-   vidrac:'<path d="M4 3h16v18H4zM12 3v18M4 12h16"/>',
-   def:'<path d="m14.7 6.3 3 3-8.4 8.4-4 1 1-4zM13 8l3 3"/>'
+   'Reformas':'<path d="m14 4 6 6-3 3-6-6z"/><path d="m12 8-8 8 4 4 8-8"/>',
+   'Serviços dom':'<path d="M3 11 12 3l9 8M5 10v10h14V10M10 20v-6h4v6"/>',
+   'Instalação':'<path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4"/>',
+   'Assistência':'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>',
+   'Fretes':'<path d="M2 7h11v9H2zM13 10h4l3 3v3h-7"/><circle cx="6.5" cy="18.5" r="1.8"/><circle cx="16.5" cy="18.5" r="1.8"/>',
+   'Autos':'<path d="m3 13 2-5h14l2 5v5H3z"/><circle cx="7.5" cy="18" r="1.6"/><circle cx="16.5" cy="18" r="1.6"/>',
+   'Aulas':'<path d="m2 8 10-5 10 5-10 5zM6 10.5V16c3 2 9 2 12 0v-5.5"/>',
+   'Moda':'<path d="M8 3 3 6l2 4 2-1v12h10V9l2 1 2-4-5-3a4 4 0 0 1-8 0z"/>',
+   'Saúde':'<path d="M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-2.5A4.5 4.5 0 0 1 20 10c0 6-8 11-8 11z"/>',
+   'Eventos':'<path d="M7 3h4l-1 7a2 2 0 0 1-2 2 2 2 0 0 1-2-2zM8 12v8M5 20h6M14 7h5l-1 5a2 2 0 0 1-3 0zM16.5 14v6M14 20h5"/>',
+   'Design':'<path d="M3 4h18v12H3zM8 20h8M12 16v4M9 9l-2 2 2 2M15 9l2 2-2 2"/>',
+   'Consultoria':'<path d="M3 8h18v11H3zM9 8V5h6v3M3 13h18"/>'
   };
-  function key(n){n=n.toLowerCase();for(var k in I){if(k!=='def'&&n.indexOf(k)===0)return k}
-    if(/^ar\b|ar-cond|ar cond/.test(n))return 'ar-con';return 'def'}
+  function ic(n){for(var k in I){if(n.indexOf(k)===0)return I[k]}return '<path d="m14.7 6.3 3 3-8.4 8.4-4 1 1-4zM13 8l3 3"/>'}
+  var depts=[],box=document.getElementById('categorias'),list=document.getElementById('catlist'),mega=document.getElementById('mega'),grid=document.getElementById('mega-grid'),top=document.querySelector('.topstick'),cur=-1,tm;
+  function open(i){clearTimeout(tm);cur=i;var d=depts[i];
+    grid.innerHTML=d.secs.map(function(s){return '<div><h3>'+esc(s.name)+'</h3>'+s.items.map(function(x){return '<a href="/app/#/?modo=cadastro&c='+encodeURIComponent(x)+'">'+esc(x)+'</a>'}).join('')+'</div>'}).join('');
+    mega.hidden=false;[].forEach.call(list.querySelectorAll('button'),function(b,j){b.setAttribute('aria-expanded',j===i?'true':'false')});}
+  function close(){cur=-1;mega.hidden=true;[].forEach.call(list.querySelectorAll('button'),function(b){b.setAttribute('aria-expanded','false')});}
   fetch(C.url+'/rest/v1/rpc/public_categories',{method:'POST',headers:{apikey:C.anonKey,Authorization:'Bearer '+C.anonKey,'Content-Type':'application/json'},body:'{}'})
    .then(function(r){return r.ok?r.json():[]}).then(function(l){
     if(!Array.isArray(l)||!l.length) return;
-    document.getElementById('catlist').innerHTML=l.map(function(x){
-      return '<li><a href="/app/#/?modo=cadastro&c='+encodeURIComponent(x.name)+'"><span class="ci"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+I[key(x.name)]+'</svg></span>'+esc(x.name)+'</a></li>';
-    }).join('');
-    document.getElementById('categorias').hidden=false;
+    l.forEach(function(x){var dn=x.dept||'Outros serviços',sn=x.section||'Outros';
+      var d=depts.filter(function(a){return a.name===dn})[0]; if(!d){d={name:dn,secs:[]};depts.push(d)}
+      var s=d.secs.filter(function(a){return a.name===sn})[0]; if(!s){s={name:sn,items:[]};d.secs.push(s)}
+      s.items.push(x.name)});
+    list.innerHTML=depts.map(function(d,i){return '<li><button type="button" aria-expanded="false" aria-controls="mega" data-i="'+i+'"><span class="ci"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+ic(d.name)+'</svg></span>'+esc(d.name)+'</button></li>'}).join('');
+    box.hidden=false;
+    [].forEach.call(list.querySelectorAll('button'),function(b){var i=+b.getAttribute('data-i');
+      b.addEventListener('mouseenter',function(){if(window.matchMedia('(hover:hover)').matches)open(i)});
+      b.addEventListener('click',function(){cur===i?close():open(i)});});
+    top.addEventListener('mouseleave',function(){tm=setTimeout(close,180)});
+    top.addEventListener('mouseenter',function(){clearTimeout(tm)});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape')close()});
+    document.addEventListener('click',function(e){if(!top.contains(e.target))close()});
+    window.addEventListener('scroll',function(){if(!window.matchMedia('(hover:hover)').matches)close()},{passive:true});
   }).catch(function(){});
 })();
 </script>

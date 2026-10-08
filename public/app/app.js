@@ -419,7 +419,7 @@
       if ((m = h.match(/^#\/pedido\/([0-9a-f-]{36})$/i))) return profile.role === "pro" ? proRequest(m[1]) : clientRequest(m[1]);
       if (profile.role === "pro") return h === "#/propostas" ? proProposals() : proHome();
       if (h === "#/novo") return clientNew(hp.q);
-      if (h === "#/" && hp.q.get("pro")) { var qs = new URLSearchParams(); qs.set("pro", hp.q.get("pro")); if (hp.q.get("c")) qs.set("c", hp.q.get("c")); return go("#/novo?" + qs.toString()); }
+      if (h === "#/" && (hp.q.get("pro") || hp.q.get("c"))) { var qs = new URLSearchParams(); if (hp.q.get("pro")) qs.set("pro", hp.q.get("pro")); if (hp.q.get("c")) qs.set("c", hp.q.get("c")); return go("#/novo?" + qs.toString()); }
       if (h === "#/pedidos") return clientList();
       return clientHome();
     } catch (x) {

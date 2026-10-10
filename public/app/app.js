@@ -442,15 +442,81 @@
   async function signOut() { await sb.auth.signOut(); profile = null; pro = null; user = null; location.hash = ""; route(); }
 
   // ---------- perfil ----------
+  // ---------- portfólio (fotos dos trabalhos) ----------
+  function photoUrl(path) { return sb.storage.from("portfolio").getPublicUrl(path).data.publicUrl; }
+  function shrink(file) {
+    return new Promise(function (ok, no) {
+      var img = new Image(), u = URL.createObjectURL(file);
+      img.onload = function () {
+        var k = Math.min(1, 1280 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u);
+        c.toBlob(function (b) { b ? ok(b) : no(new Error("img")); }, "image/jpeg", 0.82);
+      };
+      img.onerror = function () { URL.revokeObjectURL(u); no(new Error("img")); };
+      img.src = u;
+    });
+  }
+  async function portfolioHtml() {
+    var r = await sb.from("pro_photos").select("id,path").eq("user_id", user.id).order("created_at", { ascending: false });
+    if (r.error) return "";
+    var l = r.data || [];
+    return '<h2>Meus trabalhos</h2><div class="card"><p class="muted small" style="margin:0 0 10px">Mostre fotos de serviços que você já fez. Os clientes veem na hora de comparar propostas. (' + l.length + "/10)</p>" +
+      (l.length ? '<div class="pgrid">' + l.map(function (x) { return '<div class="ph"><img src="' + e(photoUrl(x.path)) + '" alt="Foto de trabalho" loading="lazy"><button type="button" class="phx" data-pdel="' + x.id + '" data-ppath="' + e(x.path) + '" aria-label="Apagar foto">×</button></div>'; }).join("") + "</div>" : "") +
+      (l.length < 10 ? '<label class="btn full" style="margin-top:12px;text-align:center;cursor:pointer">Adicionar fotos<input id="pfile" type="file" accept="image/*" multiple hidden></label><div id="pmsg"></div>' : "") + "</div>";
+  }
+  function portfolioBind() {
+    var f = $("pfile");
+    if (f) f.onchange = async function () {
+      var files = Array.prototype.slice.call(f.files || []), msg = $("pmsg"), room = 10 - ((document.querySelectorAll("[data-pdel]") || []).length), n = 0;
+      files = files.slice(0, room);
+      for (var i = 0; i < files.length; i++) {
+        if (msg) msg.innerHTML = '<p class="muted small">Enviando ' + (i + 1) + " de " + files.length + "…</p>";
+        try {
+          var blob = await shrink(files[i]), path = user.id + "/" + Date.now() + "-" + i + ".jpg";
+          var up = await sb.storage.from("portfolio").upload(path, blob, { contentType: "image/jpeg" });
+          if (up.error) throw up.error;
+          var ins = await sb.from("pro_photos").insert({ user_id: user.id, path: path });
+          if (ins.error) { await sb.storage.from("portfolio").remove([path]); throw ins.error; }
+          n++;
+        } catch (x) { toast(friendly(x)); break; }
+      }
+      if (n) toast(n === 1 ? "Foto adicionada!" : n + " fotos adicionadas!");
+      screenPerfil();
+    };
+    Array.prototype.forEach.call(document.querySelectorAll("[data-pdel]"), function (b) {
+      b.onclick = async function () {
+        if (!confirm("Apagar esta foto?")) return;
+        b.disabled = true;
+        await sb.storage.from("portfolio").remove([b.getAttribute("data-ppath")]);
+        var d = await sb.from("pro_photos").delete().eq("id", b.getAttribute("data-pdel"));
+        if (d.error) { b.disabled = false; toast(friendly(d.error)); } else screenPerfil();
+      };
+    });
+  }
+  function photoStrip(paths) {
+    if (!paths || !paths.length) return "";
+    return '<div class="pstrip" aria-label="Trabalhos do profissional">' + paths.slice(0, 8).map(function (p) { return '<img src="' + e(photoUrl(p)) + '" data-ph="' + e(photoUrl(p)) + '" alt="Foto de trabalho do profissional" loading="lazy">'; }).join("") + "</div>";
+  }
+  function photoBind() {
+    Array.prototype.forEach.call(document.querySelectorAll("[data-ph]"), function (im) {
+      im.onclick = function () {
+        var o = document.createElement("div"); o.className = "lb"; o.innerHTML = '<img src="' + e(im.getAttribute("data-ph")) + '" alt="Foto ampliada">';
+        o.onclick = function () { o.remove(); }; document.body.appendChild(o);
+      };
+    });
+  }
+
   async function screenPerfil() {
     var isPro = profile.role === "pro";
     var mpHtml = isPro && pro && pro.status === "approved" ? await mpConnectHtml() : "";
+    var pfHtml = isPro ? await portfolioHtml() : "";
     shell('<div class="card"><div class="row" style="justify-content:flex-start;gap:14px">' + avatar(profile.name, 0) + '<div><b>' + e(profile.name) + '</b><br><span class="muted small">' + e(user.email || "") + "<br>" + e(profile.phone || "") + "</span></div></div>" +
       '<p style="margin:12px 0 0">' + (isPro ? "Profissional " + (pro && pro.status === "approved" ? '<span class="pill ok">aprovado</span>' : pro && pro.status === "suspended" ? '<span class="pill err">suspenso</span>' : '<span class="pill warn">em análise</span>') : "Cliente") + "</p></div>" +
-      mpHtml + supportCard() + passkeyCardHtml() + installBlock() +
+      mpHtml + pfHtml + supportCard() + passkeyCardHtml() + installBlock() +
       '<p class="small center muted" style="margin-top:18px"><a href="/termos.html" target="_blank" rel="noopener">Termos</a> · <a href="/privacidade.html" target="_blank" rel="noopener">Privacidade</a></p>' +
       '<button class="danger full" id="out" type="button">Sair da conta</button>', "perfil", topbar("Perfil"));
-    $("out").onclick = signOut; bindInstall(); mpConnectBind(); passkeyCardBind();
+    $("out").onclick = signOut; bindInstall(); mpConnectBind(); passkeyCardBind(); if (isPro) portfolioBind();
   }
 
   // ---------- chat ----------
@@ -618,10 +684,12 @@
     if (!r.data) return shell('<div class="empty">Pedido não encontrado.</div><a class="btn full" href="#/pedidos">Voltar</a>', "pedidos", topbar("Pedido", "#/pedidos"));
     var q = r.data;
     var pr = await sb.from("proposals").select("*").eq("request_id", id).order("amount_cents");
-    var props = pr.data || [], names = {};
+    var props = pr.data || [], names = {}, phs = {};
     if (props.length) {
       var pp = await sb.from("pro_public").select("id,name,bio,years_exp,rating_avg,rating_count").in("id", props.map(function (x) { return x.pro_id; }));
       (pp.data || []).forEach(function (x) { names[x.id] = x; });
+      var pf = await sb.from("pro_photos").select("user_id,path").in("user_id", props.map(function (x) { return x.pro_id; })).order("created_at", { ascending: false });
+      (pf.data || []).forEach(function (x) { (phs[x.user_id] = phs[x.user_id] || []).push(x.path); });
     }
     var html = "<h1>" + e(q.title) + '</h1><div class="row"><span class="muted small">' + e(q.categories ? q.categories.name : "") + " · " + dt(q.created_at) + "</span>" + pill(STATUS, q.status) + "</div>" +
       '<div class="card"><p style="white-space:pre-wrap;margin:0">' + e(q.description) + "</p>" +
@@ -644,14 +712,14 @@
         return '<div class="card prop"><div class="who">' + avatar(n.name || "P", i) + '<div class="t"><b>' + e(n.name || "Profissional") + '</b><span class="muted small">' + (n.rating_count ? '<span class="star">' + icon("star", 14) + "</span> " + Number(n.rating_avg).toFixed(1) + " (" + n.rating_count + ") · " : "Novo no Resolvo Já · ") + (n.years_exp != null ? n.years_exp + " anos de experiência" : "") + '</span></div><span class="price">' + brl(p.amount_cents) + "</span></div>" +
           '<p style="margin:10px 0 0">' + pill(PSTATUS, p.status) + "</p>" +
           (p.eta_text ? '<p style="margin:8px 0 0"><b>Prazo:</b> ' + e(p.eta_text) + "</p>" : "") + (p.message ? '<p style="margin:6px 0 0;white-space:pre-wrap">' + e(p.message) + "</p>" : "") +
-          (n.bio ? '<p class="muted small" style="margin:6px 0 0">' + e(n.bio) + "</p>" : "") +
+          (n.bio ? '<p class="muted small" style="margin:6px 0 0">' + e(n.bio) + "</p>" : "") + photoStrip(phs[p.pro_id]) +
           (q.status === "open" && p.status === "sent" ? '<button class="full" data-acc="' + p.id + '" type="button">Aceitar esta proposta</button>' : "") + "</div>";
       }).join("") : '<div class="empty">Ainda não chegaram propostas. Avisaremos quando chegar a primeira — volte aqui em alguns minutos.</div>';
     }
     if ((q.status === "open" && props.length) || q.status === "awaiting_payment" || q.status === "hired") html += chatBlock(id);
     if (q.status === "open" || q.status === "awaiting_payment") html += '<button class="danger full" id="can" type="button">Cancelar pedido</button>';
     if (accepted && q.status !== "cancelled") html += reportHtml();
-    shell(html, "pedidos", topbar("Pedido", "#/pedidos"));
+    shell(html, "pedidos", topbar("Pedido", "#/pedidos")); photoBind();
     if (accepted) reportBind(id, accepted.pro_id);
     Array.prototype.forEach.call(document.querySelectorAll("[data-acc]"), function (b) {
       b.onclick = async function () {

@@ -80,7 +80,10 @@
   }
   function initials(n) { var p = String(n || "?").trim().split(/\s+/); return ((p[0] || "?").charAt(0) + (p[1] ? p[1].charAt(0) : "")).toUpperCase(); }
   var AVC = ["", "g", "o", "p"];
-  function avatar(n, i) { return '<span class="av ' + AVC[(i || 0) % 4] + '" aria-hidden="true">' + e(initials(n)) + "</span>"; }
+  function avatar(n, i, path) {
+    if (path && sb) return '<img class="av avimg" src="' + e(photoUrl(path)) + '" alt="" loading="lazy">';
+    return '<span class="av ' + AVC[(i || 0) % 4] + '" aria-hidden="true">' + e(initials(n)) + "</span>";
+  }
   function topbar(title, back) {
     return '<div class="topbar">' + (back ? '<a class="iconbtn" href="' + back + '" aria-label="Voltar">' + icon("back") + "</a>" : "") + "<h2>" + e(title) + "</h2></div>";
   }
@@ -444,11 +447,11 @@
   // ---------- perfil ----------
   // ---------- portfólio (fotos dos trabalhos) ----------
   function photoUrl(path) { return sb.storage.from("portfolio").getPublicUrl(path).data.publicUrl; }
-  function shrink(file) {
+  function shrink(file, max) {
     return new Promise(function (ok, no) {
       var img = new Image(), u = URL.createObjectURL(file);
       img.onload = function () {
-        var k = Math.min(1, 1280 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+        var k = Math.min(1, (max || 1280) / Math.max(img.width, img.height)), c = document.createElement("canvas");
         c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
         c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u);
         c.toBlob(function (b) { b ? ok(b) : no(new Error("img")); }, "image/jpeg", 0.82);
@@ -507,16 +510,33 @@
     });
   }
 
+
+  function avatarBind() {
+    var f = $("avfile"); if (!f) return;
+    f.onchange = async function () {
+      var file = f.files && f.files[0]; if (!file) return;
+      $("avmsg").innerHTML = '<p class="muted small">Enviando…</p>';
+      try {
+        var blob = await shrink(file, 480), path = user.id + "/avatar-" + Date.now() + ".jpg", old = profile.avatar_path;
+        var up = await sb.storage.from("portfolio").upload(path, blob, { contentType: "image/jpeg" });
+        if (up.error) throw up.error;
+        var u = await sb.from("profiles").update({ avatar_path: path }).eq("id", user.id);
+        if (u.error) { await sb.storage.from("portfolio").remove([path]); throw u.error; }
+        if (old) sb.storage.from("portfolio").remove([old]);
+        profile.avatar_path = path; toast("Foto de perfil atualizada!"); screenPerfil();
+      } catch (x) { $("avmsg").innerHTML = ""; toast(friendly(x)); }
+    };
+  }
   async function screenPerfil() {
     var isPro = profile.role === "pro";
     var mpHtml = isPro && pro && pro.status === "approved" ? await mpConnectHtml() : "";
     var pfHtml = isPro ? await portfolioHtml() : "";
-    shell('<div class="card"><div class="row" style="justify-content:flex-start;gap:14px">' + avatar(profile.name, 0) + '<div><b>' + e(profile.name) + '</b><br><span class="muted small">' + e(user.email || "") + "<br>" + e(profile.phone || "") + "</span></div></div>" +
+    shell('<div class="card"><div class="row" style="justify-content:flex-start;gap:14px">' + avatar(profile.name, 0, profile.avatar_path) + '<div><b>' + e(profile.name) + '</b><br><span class="muted small">' + e(user.email || "") + "<br>" + e(profile.phone || "") + "</span></div></div>" + (isPro ? '<label class="btn slim" style="margin-top:12px;display:inline-block;cursor:pointer">' + (profile.avatar_path ? "Trocar foto de perfil" : "Adicionar foto de perfil") + '<input id="avfile" type="file" accept="image/*" hidden></label><div id="avmsg"></div>' : "") +
       '<p style="margin:12px 0 0">' + (isPro ? "Profissional " + (pro && pro.status === "approved" ? '<span class="pill ok">aprovado</span>' : pro && pro.status === "suspended" ? '<span class="pill err">suspenso</span>' : '<span class="pill warn">em análise</span>') : "Cliente") + "</p></div>" +
       mpHtml + pfHtml + supportCard() + passkeyCardHtml() + installBlock() +
       '<p class="small center muted" style="margin-top:18px"><a href="/termos.html" target="_blank" rel="noopener">Termos</a> · <a href="/privacidade.html" target="_blank" rel="noopener">Privacidade</a></p>' +
       '<button class="danger full" id="out" type="button">Sair da conta</button>', "perfil", topbar("Perfil"));
-    $("out").onclick = signOut; bindInstall(); mpConnectBind(); passkeyCardBind(); if (isPro) portfolioBind();
+    $("out").onclick = signOut; bindInstall(); mpConnectBind(); passkeyCardBind(); if (isPro) { portfolioBind(); avatarBind(); }
   }
 
   // ---------- chat ----------
@@ -686,7 +706,7 @@
     var pr = await sb.from("proposals").select("*").eq("request_id", id).order("amount_cents");
     var props = pr.data || [], names = {}, phs = {};
     if (props.length) {
-      var pp = await sb.from("pro_public").select("id,name,bio,years_exp,rating_avg,rating_count").in("id", props.map(function (x) { return x.pro_id; }));
+      var pp = await sb.from("pro_public").select("id,name,bio,years_exp,rating_avg,rating_count,avatar_path").in("id", props.map(function (x) { return x.pro_id; }));
       (pp.data || []).forEach(function (x) { names[x.id] = x; });
       var pf = await sb.from("pro_photos").select("user_id,path").in("user_id", props.map(function (x) { return x.pro_id; })).order("created_at", { ascending: false });
       (pf.data || []).forEach(function (x) { (phs[x.user_id] = phs[x.user_id] || []).push(x.path); });
@@ -709,7 +729,7 @@
       html += "<h2>Propostas" + (props.length ? " (" + props.length + ")" : "") + "</h2>";
       html += props.length ? props.map(function (p, i) {
         var n = names[p.pro_id] || {};
-        return '<div class="card prop"><div class="who">' + avatar(n.name || "P", i) + '<div class="t"><b>' + e(n.name || "Profissional") + '</b><span class="muted small">' + (n.rating_count ? '<span class="star">' + icon("star", 14) + "</span> " + Number(n.rating_avg).toFixed(1) + " (" + n.rating_count + ") · " : "Novo no Resolvo Já · ") + (n.years_exp != null ? n.years_exp + " anos de experiência" : "") + '</span></div><span class="price">' + brl(p.amount_cents) + "</span></div>" +
+        return '<div class="card prop"><div class="who">' + avatar(n.name || "P", i, n.avatar_path) + '<div class="t"><b>' + e(n.name || "Profissional") + '</b><span class="muted small">' + (n.rating_count ? '<span class="star">' + icon("star", 14) + "</span> " + Number(n.rating_avg).toFixed(1) + " (" + n.rating_count + ") · " : "Novo no Resolvo Já · ") + (n.years_exp != null ? n.years_exp + " anos de experiência" : "") + '</span></div><span class="price">' + brl(p.amount_cents) + "</span></div>" +
           '<p style="margin:10px 0 0">' + pill(PSTATUS, p.status) + "</p>" +
           (p.eta_text ? '<p style="margin:8px 0 0"><b>Prazo:</b> ' + e(p.eta_text) + "</p>" : "") + (p.message ? '<p style="margin:6px 0 0;white-space:pre-wrap">' + e(p.message) + "</p>" : "") +
           (n.bio ? '<p class="muted small" style="margin:6px 0 0">' + e(n.bio) + "</p>" : "") + photoStrip(phs[p.pro_id]) +

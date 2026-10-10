@@ -148,3 +148,5 @@ nav.bottom a.on{color:var(--c)}
 .pstrip img{flex:none;width:68px;height:68px;object-fit:cover;border-radius:10px;cursor:pointer;background:var(--soft)}
 .lb{position:fixed;inset:0;background:rgba(0,0,0,.88);display:grid;place-items:center;z-index:200;cursor:zoom-out}
 .lb img{max-width:94vw;max-height:88vh;border-radius:8px}
+
+.av.avimg{object-fit:cover;background:var(--soft)}

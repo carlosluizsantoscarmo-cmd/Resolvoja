@@ -90,7 +90,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
   var CFG = window.RESOLVO_JA_CONFIG || {};
   var LIVE = !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
   var $app = document.getElementById('app');
-  var state = { tab:'visao', pros:[], reqs:[], disputes:[], payouts:[], negs:[], audit:[], cats:[], regs:[], reports:[], ov:null, user:null, clients:[], leads:[], orders:[], extraErr:'' };
+  var state = { tab:'visao', pros:[], reqs:[], disputes:[], payouts:[], negs:[], audit:[], cats:[], regs:[], reports:[], attempts:[], ov:null, user:null, clients:[], leads:[], orders:[], extraErr:'' };
 
   /* ---------------------------------------------------------- utilidades */
   function esc(s){ var d=document.createElement('div'); d.textContent = s==null ? '' : String(s); return d.innerHTML; }
@@ -146,7 +146,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
     api = {
       login:function(){ return Promise.resolve({name:'Equipe Resolvo Já (demonstração)'}); },
       logout:function(){ return Promise.resolve(); },
-      load:function(){ state.pros=demo.pros; state.reqs=demo.reqs; state.disputes=demo.disputes; state.payouts=demo.payouts; state.negs=demo.negs; state.cats=demo.cats; state.regs=demo.regs; state.reports=demo.reports; state.ov=demo.ov; state.clients=[]; state.leads=[]; state.orders=[]; return Promise.resolve(); },
+      load:function(){ state.pros=demo.pros; state.reqs=demo.reqs; state.disputes=demo.disputes; state.payouts=demo.payouts; state.negs=demo.negs; state.cats=demo.cats; state.regs=demo.regs; state.reports=demo.reports; state.attempts=[]; state.ov=demo.ov; state.clients=[]; state.leads=[]; state.orders=[]; return Promise.resolve(); },
       docUrl:function(){ return Promise.reject(new Error('No modo demonstração não há documentos.')); },
       resume:function(){ return Promise.resolve(null); },
       adopt:function(id){ return Promise.resolve(); },
@@ -164,7 +164,8 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       addCat:function(n){ demo.cats.push({id:Date.now(),name:n,active:true}); return Promise.resolve(); },
       addReg:function(c,n){ demo.regs.push({id:Date.now(),city:c,name:n,active:true}); return Promise.resolve(); },
       toggle:function(t,id,on){ (t==='cat'?demo.cats:demo.regs).forEach(function(x){ if(x.id===id) x.active=on; }); return Promise.resolve(); },
-      report:function(id,st){ demo.reports.forEach(function(r){ if(r.id===id) r.status=st; }); return Promise.resolve(); }
+      report:function(id,st){ demo.reports.forEach(function(r){ if(r.id===id) r.status=st; }); return Promise.resolve(); },
+      delAttempt:function(id){ state.attempts=state.attempts.filter(function(a){ return a.id!==id; }); return Promise.resolve(); }
     };
   } else {
     var sb = null;
@@ -225,11 +226,13 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
           return Promise.all([
             sb.rpc('admin_overview'), sb.rpc('admin_reports'),
             sb.from('categories').select('id,name,active').order('name'),
-            sb.from('regions').select('id,city,name,active').order('city').order('name')
+            sb.from('regions').select('id,city,name,active').order('city').order('name'),
+            sb.from('contact_attempts').select('id,field,body,created_at,user_id,request_id,profiles(name,role),service_requests(title)').order('created_at',{ascending:false}).limit(500)
           ]).then(function(r){
             state.ov = r[0].error ? null : r[0].data; state.ovErr = r[0].error ? r[0].error.message : '';
             state.reports = r[1].error ? [] : (r[1].data||[]); state.reportsErr = r[1].error ? r[1].error.message : '';
             state.cats = r[2].error ? [] : (r[2].data||[]); state.regs = r[3].error ? [] : (r[3].data||[]);
+            state.attempts = r[4].error ? [] : (r[4].data||[]); state.attemptsErr = r[4].error ? r[4].error.message : '';
           });
         }).then(function(){ return api.loadExtra(); });
       },
@@ -258,7 +261,8 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       addCat:function(n){ return sb.from('categories').insert({name:n,active:true}).then(function(r){ if(r.error) throw new Error(/duplicate|unique/i.test(r.error.message)?'Essa categoria já existe.':r.error.message); }); },
       addReg:function(c,n){ return sb.from('regions').insert({city:c,name:n,active:true}).then(function(r){ if(r.error) throw new Error(/duplicate|unique/i.test(r.error.message)?'Esse bairro já existe nessa cidade.':r.error.message); }); },
       toggle:function(t,id,on){ return sb.from(t==='cat'?'categories':'regions').update({active:on}).eq('id',id).then(function(r){ if(r.error) throw new Error(r.error.message); }); },
-      report:function(id,st,note){ return sb.rpc('resolve_report',{p_report:id,p_status:st,p_note:note||null}).then(need); }
+      report:function(id,st,note){ return sb.rpc('resolve_report',{p_report:id,p_status:st,p_note:note||null}).then(need); },
+      delAttempt:function(id){ return sb.from('contact_attempts').delete().eq('id',id).then(need); }
     };
   }
 
@@ -305,13 +309,14 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       disputas: state.disputes.filter(function(d){return d.status==='open';}).length,
       saques: state.payouts.filter(function(p){return p.status==='requested';}).length,
       negs: state.negs.filter(function(n){return n.status==='awaiting_payment';}).length,
-      denuncias: state.reports.filter(function(r){return r.status==='open'||r.status==='reviewing';}).length
+      denuncias: state.reports.filter(function(r){return r.status==='open'||r.status==='reviewing';}).length,
+      alertas: state.attempts.filter(function(a){ return Date.now()-new Date(a.created_at).getTime() < 7*864e5; }).length
     };
   }
 
   function renderApp(){
     var c = counts();
-    var tabs = [['visao','Visão geral',null],['cadastros','Cadastros',c.cadastros],['negociacoes','Negociações',c.negs],['pedidos','Pedidos',null],['clientes','Clientes',null],['espera','Lista de espera',null],['pgsite','Pagamentos do site',null],['catreg','Categorias e regiões',null],['disputas','Disputas',c.disputas],['denuncias','Denúncias',c.denuncias],['saques','Saques',c.saques]];
+    var tabs = [['visao','Visão geral',null],['cadastros','Cadastros',c.cadastros],['negociacoes','Negociações',c.negs],['pedidos','Pedidos',null],['clientes','Clientes',null],['espera','Lista de espera',null],['pgsite','Pagamentos do site',null],['catreg','Categorias e regiões',null],['disputas','Disputas',c.disputas],['denuncias','Denúncias',c.denuncias],['alertas','Alertas de contato',c.alertas],['saques','Saques',c.saques]];
     var open = state.payouts.filter(function(p){return p.status==='requested';}).reduce(function(a,p){return a+p.amount_cents;},0);
     $app.innerHTML =
       (LIVE ? '' : '<div class="demo">Modo demonstração: os dados são de exemplo e nada é salvo.</div>') +
@@ -384,6 +389,18 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
               '<button class="btn" data-rep="'+esc(r.id)+'" data-to="actioned">Resolvida</button><button class="btn ghost" data-rep="'+esc(r.id)+'" data-to="dismissed">Arquivar</button></div></div>' : '') +
             '</td></tr>';
         }).join('') + '</tbody></table></div>' : empty('Nenhuma denúncia','Quando alguém denunciar um pedido ou usuário pelo app, aparece aqui.');
+    } else if(state.tab==='alertas'){
+      var FL={chat:'Chat',pedido:'Pedido',proposta:'Proposta',perfil:'Perfil'}, cnt={};
+      state.attempts.forEach(function(a){ cnt[a.user_id]=(cnt[a.user_id]||0)+1; });
+      h = '<h2>Alertas de contato</h2><p class="sub">Tentativas de passar telefone, e-mail, rede social ou link antes do pagamento. O texto foi bloqueado e não chegou à outra parte. O número no contador mostra as dos últimos 7 dias.</p>';
+      if(state.attemptsErr) h += '<p class="sub" style="color:var(--err,#B3261E)">Não foi possível carregar: '+esc(state.attemptsErr)+'. Confira se a migração 021 foi rodada no Supabase.</p>';
+      h += state.attempts.length ? '<div class="tw"><table><thead><tr><th>Quando</th><th>Quem</th><th>Onde</th><th>Texto bloqueado</th><th></th></tr></thead><tbody>' +
+        state.attempts.map(function(a){
+          var p=a.profiles||{}, rq=a.service_requests||{};
+          return '<tr><td class="num">'+esc(when(a.created_at))+'</td><td><b>'+esc(p.name||'Conta excluída')+'</b><small>'+(p.role==='pro'?'Profissional':p.role==='client'?'Cliente':'')+'</small>'+(cnt[a.user_id]>2?'<small style="color:var(--err,#B3261E)"><b>'+cnt[a.user_id]+' tentativas</b></small>':'')+'</td>' +
+            '<td>'+esc(FL[a.field]||a.field)+(rq.title?'<small>'+esc(rq.title)+'</small>':'')+'</td><td style="max-width:420px;white-space:pre-wrap">'+esc(a.body)+'</td>' +
+            '<td><button class="btn ghost" data-att="'+esc(a.id)+'">Apagar</button></td></tr>';
+        }).join('') + '</tbody></table></div>' : empty('Nenhuma tentativa registrada','Quando alguém tentar passar contato antes do pagamento, aparece aqui.');
     } else if(state.tab==='cadastros'){
       var list = state.pros.slice().sort(function(a,b){ return (a.status==='pending'?0:1)-(b.status==='pending'?0:1); });
       h = '<h2>Cadastros de profissionais</h2><p class="sub">Aprove só depois de conferir o documento. Sem o aceite do termo, o banco não deixa aprovar.</p>';
@@ -527,6 +544,9 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
         if(to!=='reviewing' && note.length<3){ toast('Explique a decisão antes de continuar.', true); document.getElementById('rn-'+id).focus(); return; }
         b.disabled=true; run(api.report(id,to,note), to==='reviewing'?'Denúncia em análise':'Denúncia atualizada');
       });
+    });
+    Array.prototype.forEach.call(v.querySelectorAll('[data-att]'), function(b){
+      b.addEventListener('click', function(){ b.disabled=true; run(api.delAttempt(b.getAttribute('data-att')), 'Alerta apagado'); });
     });
     Array.prototype.forEach.call(v.querySelectorAll('[data-pay]'), function(b){
       b.addEventListener('click', function(){ var to=b.getAttribute('data-to'); b.disabled=true;

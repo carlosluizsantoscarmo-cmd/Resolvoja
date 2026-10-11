@@ -25,6 +25,7 @@
   function toast(m) { var t = $("toast"); t.textContent = m; t.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(function () { t.classList.remove("show"); }, 3200); }
   function friendly(err) {
     var m = String((err && (err.message || err.error_description)) || err || "");
+    if (/^Por segurança/.test(m)) return m;
     if (/invalid login/i.test(m)) return "E-mail ou senha incorretos.";
     if (/already registered|already been registered/i.test(m)) return "Este e-mail já tem cadastro. Use a aba Entrar.";
     if (/not confirmed/i.test(m)) return "Confirme seu e-mail (veja a caixa de entrada) antes de entrar.";
@@ -37,6 +38,12 @@
     if (/email (signups?|provider|logins?) (is|are) disabled/i.test(m)) return "O cadastro por e-mail está desligado no Supabase (Authentication > Sign In / Providers > Email > Enable Email provider). (Detalhe técnico: " + m.slice(0, 120) + ")";
     try { console.error("Erro do app:", err); } catch (x) {}
     return "Não foi possível concluir agora. Tente de novo em instantes. (Detalhe técnico: " + m.slice(0, 160) + ")";
+  }
+  // texto recusado por conter contato: registra a tentativa para a equipe (o banco confere de novo)
+  function logBlocked(err, field, body, rid) {
+    var m = String((err && err.message) || "");
+    if (!/^Por segurança/.test(m) || !body) return;
+    try { sb.rpc("log_contact_attempt", { p_field: field, p_body: String(body).slice(0, 4000), p_request: rid || null }).then(function () {}, function () {}); } catch (x) {}
   }
   var STATUS = { open: ["Aberto", "warn"], awaiting_payment: ["Aguardando pagamento", "warn"], hired: ["Em andamento", "ok"], completed: ["Concluído", "ok"], cancelled: ["Cancelado", "err"], disputed: ["Em disputa", "err"] };
   var PSTATUS = { sent: ["Enviada", "warn"], accepted: ["Aceita", "ok"], rejected: ["Não escolhida", "err"], withdrawn: ["Retirada", "err"] };
@@ -346,7 +353,7 @@
         var path = df ? await uploadDoc(df) : null;
         if (!pro) {
           var a = await sb.from("pro_profiles").insert({ user_id: user.id, bio: bio || null, years_exp: exp, status: "pending", document_path: path, other_category: outra || null, other_city: oc || null, other_neighborhood: on || null });
-          if (a.error) throw a.error;
+          if (a.error) { logBlocked(a.error, "perfil", bio); throw a.error; }
         } else {
           var up = { other_category: outra || null, other_city: oc || null, other_neighborhood: on || null };
           if (path) up.document_path = path;
@@ -541,7 +548,7 @@
 
   // ---------- chat ----------
   function chatBlock(requestId) {
-    return '<h2>Conversa</h2><div class="card"><div class="chat" id="chat" aria-live="polite"></div><form id="cf" class="cform"><input id="cm" maxlength="500" placeholder="Escreva uma mensagem" aria-label="Mensagem"><button type="submit" aria-label="Enviar">' + icon("send", 20) + "</button></form></div>";
+    return '<h2>Conversa</h2><div class="card"><div class="chat" id="chat" aria-live="polite"></div><p class="muted small" style="margin:0 0 10px">Por segurança, telefone, e-mail, redes sociais e links só podem ser trocados depois do pagamento pelo app. Antes disso, essas mensagens são bloqueadas.</p><form id="cf" class="cform"><input id="cm" maxlength="500" placeholder="Escreva uma mensagem" aria-label="Mensagem"><button type="submit" aria-label="Enviar">' + icon("send", 20) + "</button></form></div>";
   }
   async function chatLoad(requestId) {
     var r = await sb.from("messages").select("id,sender_id,body,created_at").eq("request_id", requestId).order("created_at");
@@ -558,7 +565,7 @@
       var v = $("cm").value.trim(); if (!v) return;
       $("cm").value = "";
       var r = await sb.from("messages").insert({ request_id: requestId, sender_id: user.id, body: v });
-      if (r.error) { toast("Não foi possível enviar a mensagem."); $("cm").value = v; } else chatLoad(requestId);
+      if (r.error) { logBlocked(r.error, "chat", v, requestId); toast(/^Por segurança/.test(String(r.error.message || "")) ? friendly(r.error) : "Não foi possível enviar a mensagem."); $("cm").value = v; } else chatLoad(requestId);
     };
   }
 
@@ -692,7 +699,7 @@
         var a = await sb.from("addresses").insert({ user_id: user.id, label: "Pedido", street: rua, number: $("num").value.trim() || null, complement: $("comp").value.trim() || null, neighborhood: bai, city: cid, state: $("uf").value }).select("id").single();
         if (a.error) throw a.error;
         var q = await sb.from("service_requests").insert({ client_id: user.id, category_id: cat, address_id: a.data.id, title: tit, description: des, desired_date: $("dat").value || null, desired_slot: $("slot").value, target_pro: targetId || null }).select("id").single();
-        if (q.error) throw q.error;
+        if (q.error) { logBlocked(q.error, "pedido", [tit, des].join("\n")); throw q.error; }
         toast("Pedido publicado!"); go("#/pedido/" + q.data.id);
       } catch (x) { $("go").disabled = false; bad(friendly(x)); }
     };
@@ -1005,7 +1012,7 @@
       if (c > 5000000) return bad("Confira o valor informado.");
       $("go").disabled = true;
       var x = await sb.from("proposals").insert({ request_id: id, pro_id: user.id, amount_cents: c, eta_text: $("eta").value.trim() || null, message: $("msg").value.trim() || null });
-      if (x.error) { $("go").disabled = false; bad(friendly(x.error)); } else { toast("Proposta enviada!"); route(); }
+      if (x.error) { logBlocked(x.error, "proposta", [$("eta").value, $("msg").value].join("\n"), id); $("go").disabled = false; bad(friendly(x.error)); } else { toast("Proposta enviada!"); route(); }
     };
     if ($("wd")) $("wd").onclick = async function () {
       if (!confirm("Retirar sua proposta?")) return;

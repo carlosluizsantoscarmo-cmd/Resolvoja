@@ -322,13 +322,15 @@
     plain('<form class="card" id="f" novalidate>' +
       '<label>O que você faz?</label><div style="max-height:46vh;overflow:auto;padding-right:4px">' + catGroups(cats).map(function (g) { return '<div class="muted small" style="margin:10px 0 4px;font-weight:700">' + e(g.name) + '</div><div class="chips">' + g.items.map(function (x) { return '<label><input type="checkbox" name="cat" value="' + x.id + '"> ' + e(x.name) + "</label>"; }).join("") + "</div>"; }).join("") + "</div>" +
       '<label for="outra" style="margin-top:14px">Sua profissão não está na lista? (opcional)</label><input id="outra" maxlength="60" placeholder="Ex.: Fotógrafo" autocomplete="off"><p class="muted small" style="margin:6px 0 0">Escreva aqui e a equipe cria a categoria para você.</p>' +
-      '<label>Onde você atende?</label><div class="chips">' + regions.map(function (x) { return '<label><input type="checkbox" name="reg" value="' + x.id + '"> ' + e(x.name) + " (" + e(x.city) + ")</label>"; }).join("") + "</div>" +
-      '<label style="margin-top:14px">Seu bairro não está na lista? (opcional)</label><div style="display:flex;gap:10px"><input id="ocity" maxlength="60" placeholder="Cidade" aria-label="Cidade" autocomplete="off"><input id="onei" maxlength="60" placeholder="Bairro" aria-label="Bairro" autocomplete="off"></div><p class="muted small" style="margin:6px 0 0">Se você atende em outro lugar, escreva aqui. Avisamos quando chegarmos lá.</p>' +
+      '<label>Onde você atende?</label><label style="font-weight:700;display:flex;gap:8px;align-items:center;margin:6px 0 10px"><input id="all" type="checkbox" style="width:auto"' + (pro && pro.serves_all ? " checked" : "") + '><span>Atendo todo o Brasil</span></label><div id="regbox"><div class="chips">' + regions.map(function (x) { return '<label><input type="checkbox" name="reg" value="' + x.id + '"> ' + e(x.name) + " (" + e(x.city) + ")</label>"; }).join("") + "</div>" +
+      '<label style="margin-top:14px">Seu bairro não está na lista? (opcional)</label><div style="display:flex;gap:10px"><input id="ocity" maxlength="60" placeholder="Cidade" aria-label="Cidade" autocomplete="off"><input id="onei" maxlength="60" placeholder="Bairro" aria-label="Bairro" autocomplete="off"></div><p class="muted small" style="margin:6px 0 0">Se você atende em outro lugar, escreva aqui. Avisamos quando chegarmos lá.</p></div>' +
       '<label for="exp">Anos de experiência</label><input id="exp" type="number" inputmode="numeric" min="0" max="70">' +
       '<label for="bio">Fale um pouco sobre seu trabalho</label><textarea id="bio" maxlength="600" placeholder="Ex.: Eletricista há 8 anos. Instalação de chuveiro, tomadas, quadro de luz."></textarea>' +
           '<label for="doc">Documento com foto (RG ou CNH)</label><input id="doc" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"><p class="muted small">Foto nítida ou PDF, até 5 MB. Só a equipe do Resolvo Já vê este arquivo, para confirmar quem você é. Ele não aparece para clientes.</p>' +
       '<label style="font-weight:500;display:flex;gap:8px;align-items:flex-start;margin-top:16px"><input id="ok" type="checkbox" style="width:auto;margin-top:4px"><span>Li e aceito o <a href="/termo-prestador.html" target="_blank" rel="noopener">Termo do Prestador</a> e os <a href="/termos.html" target="_blank" rel="noopener">Termos de Uso</a>, inclusive a taxa de verificação de R$ 29,90 e a comissão de 10% sobre os serviços feitos pelo app.</span></label>' +
       '<div id="err"></div><button class="full" id="go" type="submit">Enviar para análise</button></form>', "Cadastro de profissional", "Nossa equipe confere seus dados antes de liberar os pedidos. Você só aparece para clientes depois de aprovado.");
+    function allToggle() { var on = $("all").checked, bx = $("regbox"); bx.style.opacity = on ? ".4" : ""; bx.style.pointerEvents = on ? "none" : ""; Array.prototype.forEach.call(bx.querySelectorAll("input"), function (i) { i.disabled = on; }); }
+    $("all").onchange = allToggle; allToggle();
     $("f").onsubmit = async function (ev) {
       ev.preventDefault();
       function bad(m) { $("err").innerHTML = '<div class="banner err" role="alert">' + e(m) + "</div>"; }
@@ -338,10 +340,12 @@
       var outra = ($("outra").value || "").replace(/\s+/g, " ").trim();
       if (outra && outra.length < 3) return bad("Escreva o nome da profissão com pelo menos 3 letras.");
       if (!cs.length && !outra) return bad("Escolha pelo menos um serviço ou escreva a sua profissão.");
-      var oc = ($("ocity").value || "").replace(/\s+/g, " ").trim(), on = ($("onei").value || "").replace(/\s+/g, " ").trim();
+      var all = $("all").checked;
+      if (all) rs = [];
+      var oc = all ? "" : ($("ocity").value || "").replace(/\s+/g, " ").trim(), on = all ? "" : ($("onei").value || "").replace(/\s+/g, " ").trim();
       if ((oc && !on) || (!oc && on)) return bad("Preencha a cidade e o bairro, ou deixe os dois em branco.");
       if (oc && (oc.length < 2 || on.length < 2)) return bad("Confira o nome da cidade e do bairro.");
-      if (!rs.length && !(oc && on)) return bad("Escolha pelo menos um bairro ou escreva o seu.");
+      if (!all && !rs.length && !(oc && on)) return bad("Escolha pelo menos um bairro, escreva o seu ou marque \"Atendo todo o Brasil\".");
       if (exp !== null && (!(exp >= 0) || exp > 70)) return bad("Confira os anos de experiência.");
       var df = $("doc").files[0], needDoc = !pro || !pro.document_path;
       if (needDoc && !df) return bad("Envie a foto do seu RG ou CNH para a equipe conferir.");
@@ -352,10 +356,10 @@
       try {
         var path = df ? await uploadDoc(df) : null;
         if (!pro) {
-          var a = await sb.from("pro_profiles").insert({ user_id: user.id, bio: bio || null, years_exp: exp, status: "pending", document_path: path, other_category: outra || null, other_city: oc || null, other_neighborhood: on || null });
+          var a = await sb.from("pro_profiles").insert({ user_id: user.id, bio: bio || null, years_exp: exp, status: "pending", document_path: path, other_category: outra || null, other_city: oc || null, other_neighborhood: on || null, serves_all: all });
           if (a.error) { logBlocked(a.error, "perfil", bio); throw a.error; }
         } else {
-          var up = { other_category: outra || null, other_city: oc || null, other_neighborhood: on || null };
+          var up = { other_category: outra || null, other_city: oc || null, other_neighborhood: on || null, serves_all: all };
           if (path) up.document_path = path;
           var a2 = await sb.from("pro_profiles").update(up).eq("user_id", user.id);
           if (a2.error) throw a2.error;

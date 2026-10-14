@@ -506,6 +506,21 @@ function avisoTexto(type, d, t) {
     if (!Number.isInteger(cents) || cents <= 0) return null;
     return { subject: `Sua proposta foi aceita: ${titulo}`, text: `Olá, ${nome(d.pro_name)}!\n\nO cliente aceitou sua proposta para "${titulo}" (${brl(cents)}).\n\nNossa equipe vai entrar em contato para combinar o pagamento e liberar o início do serviço. Fique de olho no WhatsApp e no app.${rodape}` };
   }
+  if (type === "pro_novo") {
+    const nm = t(d.pro_name, 60) || "(sem nome)";
+    const msg = `Olá, ${nome(d.pro_name)}! Aqui é do Resolvo Já. Recebemos seu cadastro de profissional e estamos conferindo. Já já te damos um retorno!`;
+    const linhas = [
+      `Um profissional acabou de se cadastrar e está esperando a sua aprovação.`, ``,
+      `Nome: ${nm}`, `WhatsApp: ${t(d.phone, 30) || "(sem telefone)"}`,
+      d.years_exp != null && d.years_exp !== "" ? `Experiência: ${t(d.years_exp, 3)} anos` : "",
+      d.serves_all ? `Atende: todo o Brasil` : "",
+      d.other_category ? `Pediu uma categoria nova: ${t(d.other_category, 60)}` : "",
+      d.other_city && d.other_neighborhood ? `Pediu uma região nova: ${t(d.other_neighborhood, 60)} (${t(d.other_city, 60)})` : "",
+      ``, `Chamar no WhatsApp: ${waLink(d.phone, msg)}`, ``,
+      `Para aprovar: https://resolvoja.app.br/equipe/ > Cadastros. Confira o documento antes de aprovar.`,
+    ].filter((l, i, a) => l !== "" || a[i - 1] !== "");
+    return { subject: `Novo profissional para aprovar: ${nm}`, text: linhas.join("\n") };
+  }
   if (type === "pro_aprovado") {
     return { subject: "Seu cadastro foi aprovado no Resolvo Já", text: `Olá, ${nome(d.pro_name)}!\n\nSeu cadastro foi aprovado. Você já pode ver os pedidos da sua área e enviar propostas.\n\nDica: responda rápido e descreva bem o que está incluso no valor.${rodape}` };
   }

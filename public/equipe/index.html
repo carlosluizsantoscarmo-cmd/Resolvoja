@@ -316,7 +316,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
 
   function renderApp(){
     var c = counts();
-    var tabs = [['visao','Visão geral',null],['cadastros','Cadastros',c.cadastros],['negociacoes','Negociações',c.negs],['pedidos','Pedidos',null],['clientes','Contas',null],['espera','Lista de espera',null],['pgsite','Pagamentos do site',null],['catreg','Categorias e regiões',null],['disputas','Disputas',c.disputas],['denuncias','Denúncias',c.denuncias],['alertas','Alertas de contato',c.alertas],['saques','Saques',c.saques]];
+    var tabs = [['visao','Visão geral',null],['cadastros','Cadastros',c.cadastros],['negociacoes','Negociações',c.negs],['pedidos','Pedidos',null],['clientes','Clientes',null],['profcontas','Profissionais',null],['espera','Lista de espera',null],['pgsite','Pagamentos do site',null],['catreg','Categorias e regiões',null],['disputas','Disputas',c.disputas],['denuncias','Denúncias',c.denuncias],['alertas','Alertas de contato',c.alertas],['saques','Saques',c.saques]];
     var open = state.payouts.filter(function(p){return p.status==='requested';}).reduce(function(a,p){return a+p.amount_cents;},0);
     $app.innerHTML =
       (LIVE ? '' : '<div class="demo">Modo demonstração: os dados são de exemplo e nada é salvo.</div>') +
@@ -359,7 +359,8 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
           kpi('Comissão estimada', money(o.commission_cents), '10% de '+money(o.gmv_cents)+' contratados') +
           kpi('Clientes que voltaram', pct(o.repeat_pct), o.repeat_clients+' de '+o.hired_clients+' com 2ª contratação') +
           kpi('Profissionais aprovados', o.pros_approved, o.pros_pending+' aguardando aprovação') +
-          kpi('Contas cadastradas', (state.clients && state.clients.length) ? state.clients.length : o.clients_total) +
+          kpi('Clientes cadastrados', (state.clients && state.clients.length) ? state.clients.filter(function(c){return c.role!=='pro';}).length : o.clients_total) +
+          kpi('Profissionais cadastrados', (state.clients && state.clients.length) ? state.clients.filter(function(c){return c.role==='pro';}).length : (o.pros_approved+o.pros_pending)) +
           kpi('Denúncias abertas', o.reports_open) + '</div>' +
           '<p class="sub">A comissão é estimada: 10% do valor das propostas aceitas em pedidos já em andamento ou concluídos. O valor realmente recebido está no Mercado Pago.</p>';
       }
@@ -445,14 +446,17 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
               '<input id="n-'+esc(d.id)+'" placeholder="Explique a decisão" aria-label="Explicação da decisão"><button class="btn" data-disp="'+esc(d.id)+'">Decidir</button></div>' : '') +
             '</td></tr>';
         }).join('') + '</tbody></table></div>' : empty('Nenhuma disputa','Quando um cliente ou profissional abrir uma disputa, ela aparece aqui.');
-    } else if(state.tab==='clientes'){
-      h = '<h2>Contas cadastradas</h2><p class="sub">Todas as contas criadas no app (até 1000, as mais recentes primeiro): clientes e profissionais. Quem criou conta como profissional e não terminou o cadastro aparece como "Profissional (cadastro incompleto)".</p>';
+    } else if(state.tab==='clientes' || state.tab==='profcontas'){
+      var isPro = state.tab==='profcontas';
+      var lista = state.clients.filter(function(c){ return isPro ? c.role==='pro' : c.role!=='pro'; });
+      h = isPro ? '<h2>Profissionais cadastrados</h2><p class="sub">Todas as contas criadas como profissional (as mais recentes primeiro), inclusive quem ainda não terminou o cadastro profissional. A aprovação é feita na aba Cadastros.</p>'
+                : '<h2>Clientes cadastrados</h2><p class="sub">Quem criou conta como cliente no app (as mais recentes primeiro). Clientes não precisam de aprovação.</p>';
       if(state.clientsErr) h += '<p class="sub" style="color:var(--err)">Não foi possível carregar: '+esc(state.clientsErr)+'.</p>';
-      var PST={approved:'Profissional aprovado',pending:'Profissional (aguardando aprovação)',rejected:'Profissional recusado',suspended:'Profissional suspenso'};
-      function tipo(c){ if(c.role==='pro') return c.pro_status ? (PST[c.pro_status]||'Profissional') : 'Profissional (cadastro incompleto)'; return 'Cliente'; }
-      h += state.clients.length ? '<div class="tw"><table><thead><tr><th>Nome</th><th>Tipo</th><th>WhatsApp</th><th>E-mail</th><th>Cadastro</th><th>Pedidos</th></tr></thead><tbody>' +
-        state.clients.map(function(c){ return '<tr><td><b>'+esc(c.name)+'</b></td><td>'+esc(tipo(c))+'</td><td>'+esc(c.phone||'')+'</td><td>'+esc(c.email||'')+'</td><td class="num">'+esc(when(c.created_at))+'</td><td class="num">'+esc(c.orders_count)+'</td></tr>'; }).join('') +
-        '</tbody></table></div>' : (state.clientsErr ? '' : empty('Nenhuma conta ainda','Quem criar conta aparece aqui.'));
+      var PST={approved:'Aprovado',pending:'Aguardando aprovação',suspended:'Suspenso'};
+      function sit(c){ return c.pro_status ? (PST[c.pro_status]||c.pro_status) : 'Cadastro incompleto'; }
+      h += lista.length ? '<div class="tw"><table><thead><tr><th>Nome</th>'+(isPro?'<th>Situação</th>':'')+'<th>WhatsApp</th><th>E-mail</th><th>Cadastro</th>'+(isPro?'':'<th>Pedidos</th>')+'</tr></thead><tbody>' +
+        lista.map(function(c){ return '<tr><td><b>'+esc(c.name)+'</b></td>'+(isPro?'<td>'+esc(sit(c))+'</td>':'')+'<td>'+esc(c.phone||'')+'</td><td>'+esc(c.email||'')+'</td><td class="num">'+esc(when(c.created_at))+'</td>'+(isPro?'':'<td class="num">'+esc(c.orders_count)+'</td>')+'</tr>'; }).join('') +
+        '</tbody></table></div>' : (state.clientsErr ? '' : empty(isPro?'Nenhum profissional ainda':'Nenhum cliente ainda','Quem criar conta aparece aqui.'));
     } else if(state.tab==='espera'){
       h = '<h2>Lista de espera</h2><p class="sub">Pessoas que se cadastraram no site (principalmente de outras cidades). Para apagar um cadastro a pedido da pessoa (LGPD), use Excluir.</p>';
       if(state.extraErr) h += '<p class="sub" style="color:var(--err)">'+esc(state.extraErr)+'</p>';

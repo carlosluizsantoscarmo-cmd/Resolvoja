@@ -297,13 +297,13 @@
       '<label for="nome">Nome completo</label><input id="nome" maxlength="100" autocomplete="name">' +
       '<label for="tel">WhatsApp com DDD</label><input id="tel" type="tel" maxlength="20" placeholder="(27) 9 0000-0000">' +
       '<label>Como você vai usar o app?</label><div class="chips"><label><input type="radio" name="role" value="client" checked> Quero contratar</label><label><input type="radio" name="role" value="pro"> Sou profissional</label></div>' +
-      '<div id="err"></div><button class="full" id="go" type="submit">Continuar</button></form>', "Complete seu cadastro");
+      '<label for="foto">Foto de perfil (opcional)</label><input id="foto" type="file" accept="image/*"><p class="muted small">Pode adicionar agora ou depois, no Perfil.</p><div id="err"></div><button class="full" id="go" type="submit">Continuar</button></form>', "Complete seu cadastro");
     $("f").onsubmit = async function (ev) {
       ev.preventDefault();
       var nome = $("nome").value.trim(), tel = $("tel").value.trim(), d = tel.replace(/\D/g, "");
       if (nome.length < 2 || d.length < 10 || d.length > 13) { $("err").innerHTML = '<div class="banner err">Confira nome e WhatsApp (com DDD).</div>'; return; }
       $("go").disabled = true;
-      try { await createProfile({ role: document.querySelector('input[name="role"]:checked').value, name: nome, phone: tel }); await loadMe(true); route(); }
+      try { await createProfile({ role: document.querySelector('input[name="role"]:checked').value, name: nome, phone: tel }); var fo = $("foto").files && $("foto").files[0]; if (fo) { try { await uploadAvatarFile(fo); } catch (x2) { toast("Não deu para enviar a foto agora. Você pode adicionar no Perfil."); } } await loadMe(true); route(); }
       catch (x) { $("go").disabled = false; $("err").innerHTML = '<div class="banner err">' + e(friendly(x)) + "</div>"; }
     };
   }
@@ -326,7 +326,7 @@
       '<label style="margin-top:14px">Seu bairro não está na lista? (opcional)</label><div style="display:flex;gap:10px"><input id="ocity" maxlength="60" placeholder="Cidade" aria-label="Cidade" autocomplete="off"><input id="onei" maxlength="60" placeholder="Bairro" aria-label="Bairro" autocomplete="off"></div><p class="muted small" style="margin:6px 0 0">Se você atende em outro lugar, escreva aqui. Avisamos quando chegarmos lá.</p></div>' +
       '<label for="exp">Anos de experiência</label><input id="exp" type="number" inputmode="numeric" min="0" max="70">' +
       '<label for="bio">Fale um pouco sobre seu trabalho</label><textarea id="bio" maxlength="600" placeholder="Ex.: Eletricista há 8 anos. Instalação de chuveiro, tomadas, quadro de luz."></textarea>' +
-          '<label for="doc">Documento com foto (RG ou CNH)</label><input id="doc" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"><p class="muted small">Foto nítida ou PDF, até 5 MB. Só a equipe do Resolvo Já vê este arquivo, para confirmar quem você é. Ele não aparece para clientes.</p>' +
+          '<label for="foto">Foto de perfil (opcional)</label><input id="foto" type="file" accept="image/*"><p class="muted small">Uma foto sua de rosto, para os clientes confiarem mais.</p><label for="doc">Documento com foto (RG ou CNH)</label><input id="doc" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"><p class="muted small">Foto nítida ou PDF, até 5 MB. Só a equipe do Resolvo Já vê este arquivo, para confirmar quem você é. Ele não aparece para clientes.</p>' +
       '<label style="font-weight:500;display:flex;gap:8px;align-items:flex-start;margin-top:16px"><input id="ok" type="checkbox" style="width:auto;margin-top:4px"><span>Li e aceito o <a href="/termo-prestador.html" target="_blank" rel="noopener">Termo do Prestador</a> e os <a href="/termos.html" target="_blank" rel="noopener">Termos de Uso</a>, inclusive a taxa de verificação de R$ 29,90 e a comissão de 10% sobre os serviços feitos pelo app.</span></label>' +
       '<div id="err"></div><button class="full" id="go" type="submit">Enviar para análise</button></form>', "Cadastro de profissional", "Nossa equipe confere seus dados antes de liberar os pedidos. Você só aparece para clientes depois de aprovado.");
     function allToggle() { var on = $("all").checked, bx = $("regbox"); bx.style.opacity = on ? ".4" : ""; bx.style.pointerEvents = on ? "none" : ""; Array.prototype.forEach.call(bx.querySelectorAll("input"), function (i) { i.disabled = on; }); }
@@ -377,6 +377,8 @@
           var t2 = await sb.rpc("accept_terms", { p_version: TERMS_VERSION, p_user_agent: String(navigator.userAgent).slice(0, 200) });
           if (t2.error) throw t2.error;
         }
+        var fo = $("foto").files && $("foto").files[0];
+        if (fo) { try { await uploadAvatarFile(fo); } catch (x2) { toast("Cadastro enviado, mas a foto não subiu. Adicione no Perfil."); } }
         await loadMe(true); go("#/");
       } catch (x) { $("go").disabled = false; bad(friendly(x)); }
     };
@@ -522,6 +524,14 @@
   }
 
 
+  async function uploadAvatarFile(file) {
+    var blob = await shrink(file, 480), path = user.id + "/avatar-" + Date.now() + ".jpg";
+    var up = await sb.storage.from("portfolio").upload(path, blob, { contentType: "image/jpeg" });
+    if (up.error) throw up.error;
+    var u = await sb.from("profiles").update({ avatar_path: path }).eq("id", user.id);
+    if (u.error) { await sb.storage.from("portfolio").remove([path]); throw u.error; }
+    return path;
+  }
   function avatarBind() {
     var f = $("avfile"); if (!f) return;
     f.onchange = async function () {
@@ -542,12 +552,12 @@
     var isPro = profile.role === "pro";
     var mpHtml = isPro && pro && pro.status === "approved" ? await mpConnectHtml() : "";
     var pfHtml = isPro ? await portfolioHtml() : "";
-    shell('<div class="card"><div class="row" style="justify-content:flex-start;gap:14px">' + avatar(profile.name, 0, profile.avatar_path) + '<div><b>' + e(profile.name) + '</b><br><span class="muted small">' + e(user.email || "") + "<br>" + e(profile.phone || "") + "</span></div></div>" + (isPro ? '<label class="btn slim" style="margin-top:12px;display:inline-block;cursor:pointer">' + (profile.avatar_path ? "Trocar foto de perfil" : "Adicionar foto de perfil") + '<input id="avfile" type="file" accept="image/*" hidden></label><div id="avmsg"></div>' : "") +
+    shell('<div class="card"><div class="row" style="justify-content:flex-start;gap:14px">' + avatar(profile.name, 0, profile.avatar_path) + '<div><b>' + e(profile.name) + '</b><br><span class="muted small">' + e(user.email || "") + "<br>" + e(profile.phone || "") + "</span></div></div>" + ('<label class="btn slim" style="margin-top:12px;display:inline-block;cursor:pointer">' + (profile.avatar_path ? "Trocar foto de perfil" : "Adicionar foto de perfil") + '<input id="avfile" type="file" accept="image/*" hidden></label><div id="avmsg"></div>') +
       '<p style="margin:12px 0 0">' + (isPro ? "Profissional " + (pro && pro.status === "approved" ? '<span class="pill ok">aprovado</span>' : pro && pro.status === "suspended" ? '<span class="pill err">suspenso</span>' : '<span class="pill warn">em análise</span>') : "Cliente") + "</p></div>" +
       mpHtml + pfHtml + supportCard() + passkeyCardHtml() + installBlock() +
       '<p class="small center muted" style="margin-top:18px"><a href="/termos.html" target="_blank" rel="noopener">Termos</a> · <a href="/privacidade.html" target="_blank" rel="noopener">Privacidade</a></p>' +
       '<button class="danger full" id="out" type="button">Sair da conta</button>', "perfil", topbar("Perfil"));
-    $("out").onclick = signOut; bindInstall(); mpConnectBind(); passkeyCardBind(); if (isPro) { portfolioBind(); avatarBind(); }
+    $("out").onclick = signOut; bindInstall(); mpConnectBind(); passkeyCardBind(); avatarBind(); if (isPro) { portfolioBind(); }
   }
 
   // ---------- chat ----------

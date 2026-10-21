@@ -359,7 +359,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
           kpi('Comissão estimada', money(o.commission_cents), '10% de '+money(o.gmv_cents)+' contratados') +
           kpi('Clientes que voltaram', pct(o.repeat_pct), o.repeat_clients+' de '+o.hired_clients+' com 2ª contratação') +
           kpi('Profissionais aprovados', o.pros_approved, o.pros_pending+' aguardando aprovação') +
-          kpi('Clientes cadastrados', o.clients_total) +
+          kpi('Contas cadastradas', (state.clients && state.clients.length) ? state.clients.length : o.clients_total) +
           kpi('Denúncias abertas', o.reports_open) + '</div>' +
           '<p class="sub">A comissão é estimada: 10% do valor das propostas aceitas em pedidos já em andamento ou concluídos. O valor realmente recebido está no Mercado Pago.</p>';
       }

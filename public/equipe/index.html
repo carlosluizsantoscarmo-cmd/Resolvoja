@@ -454,8 +454,8 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       if(state.clientsErr) h += '<p class="sub" style="color:var(--err)">Não foi possível carregar: '+esc(state.clientsErr)+'.</p>';
       var PST={approved:'Aprovado',pending:'Aguardando aprovação',suspended:'Suspenso'};
       function sit(c){ return c.pro_status ? (PST[c.pro_status]||c.pro_status) : 'Cadastro incompleto'; }
-      h += lista.length ? '<div class="tw"><table><thead><tr><th>Nome</th>'+(isPro?'<th>Situação</th>':'')+'<th>WhatsApp</th><th>E-mail</th><th>Cadastro</th>'+(isPro?'':'<th>Pedidos</th>')+'</tr></thead><tbody>' +
-        lista.map(function(c){ return '<tr><td><b>'+esc(c.name)+'</b></td>'+(isPro?'<td>'+esc(sit(c))+'</td>':'')+'<td>'+esc(c.phone||'')+'</td><td>'+esc(c.email||'')+'</td><td class="num">'+esc(when(c.created_at))+'</td>'+(isPro?'':'<td class="num">'+esc(c.orders_count)+'</td>')+'</tr>'; }).join('') +
+      h += lista.length ? '<div class="tw"><table><thead><tr><th>Nome</th>'+(isPro?'<th>Situação</th><th>O que falta</th>':'')+'<th>WhatsApp</th><th>E-mail</th><th>Cadastro</th>'+(isPro?'':'<th>Pedidos</th>')+'</tr></thead><tbody>' +
+        lista.map(function(c){ return '<tr><td><b>'+esc(c.name)+'</b></td>'+(isPro?'<td>'+esc(sit(c))+'</td><td>'+esc(c.faltando||'—')+'</td>':'')+'<td>'+esc(c.phone||'')+'</td><td>'+esc(c.email||'')+'</td><td class="num">'+esc(when(c.created_at))+'</td>'+(isPro?'':'<td class="num">'+esc(c.orders_count)+'</td>')+'</tr>'; }).join('') +
         '</tbody></table></div>' : (state.clientsErr ? '' : empty(isPro?'Nenhum profissional ainda':'Nenhum cliente ainda','Quem criar conta aparece aqui.'));
     } else if(state.tab==='espera'){
       h = '<h2>Lista de espera</h2><p class="sub">Pessoas que se cadastraram no site (principalmente de outras cidades). Para apagar um cadastro a pedido da pessoa (LGPD), use Excluir.</p>';

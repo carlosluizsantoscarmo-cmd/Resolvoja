@@ -316,7 +316,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
 
   function renderApp(){
     var c = counts();
-    var tabs = [['visao','Visão geral',null],['cadastros','Cadastros',c.cadastros],['negociacoes','Negociações',c.negs],['pedidos','Pedidos',null],['clientes','Clientes',null],['espera','Lista de espera',null],['pgsite','Pagamentos do site',null],['catreg','Categorias e regiões',null],['disputas','Disputas',c.disputas],['denuncias','Denúncias',c.denuncias],['alertas','Alertas de contato',c.alertas],['saques','Saques',c.saques]];
+    var tabs = [['visao','Visão geral',null],['cadastros','Cadastros',c.cadastros],['negociacoes','Negociações',c.negs],['pedidos','Pedidos',null],['clientes','Contas',null],['espera','Lista de espera',null],['pgsite','Pagamentos do site',null],['catreg','Categorias e regiões',null],['disputas','Disputas',c.disputas],['denuncias','Denúncias',c.denuncias],['alertas','Alertas de contato',c.alertas],['saques','Saques',c.saques]];
     var open = state.payouts.filter(function(p){return p.status==='requested';}).reduce(function(a,p){return a+p.amount_cents;},0);
     $app.innerHTML =
       (LIVE ? '' : '<div class="demo">Modo demonstração: os dados são de exemplo e nada é salvo.</div>') +
@@ -446,11 +446,13 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
             '</td></tr>';
         }).join('') + '</tbody></table></div>' : empty('Nenhuma disputa','Quando um cliente ou profissional abrir uma disputa, ela aparece aqui.');
     } else if(state.tab==='clientes'){
-      h = '<h2>Clientes cadastrados</h2><p class="sub">Quem criou conta como cliente no app (até 500, os mais recentes primeiro). Clientes não precisam de aprovação.</p>';
-      if(state.clientsErr) h += '<p class="sub" style="color:var(--err)">Não foi possível carregar: '+esc(state.clientsErr)+'. Confira se a migração 011 foi rodada no Supabase.</p>';
-      h += state.clients.length ? '<div class="tw"><table><thead><tr><th>Cliente</th><th>WhatsApp</th><th>E-mail</th><th>Cadastro</th><th>Pedidos</th></tr></thead><tbody>' +
-        state.clients.map(function(c){ return '<tr><td><b>'+esc(c.name)+'</b></td><td>'+esc(c.phone||'')+'</td><td>'+esc(c.email||'')+'</td><td class="num">'+esc(when(c.created_at))+'</td><td class="num">'+esc(c.orders_count)+'</td></tr>'; }).join('') +
-        '</tbody></table></div>' : (state.clientsErr ? '' : empty('Nenhum cliente ainda','Quem se cadastrar como cliente aparece aqui.'));
+      h = '<h2>Contas cadastradas</h2><p class="sub">Todas as contas criadas no app (até 1000, as mais recentes primeiro): clientes e profissionais. Quem criou conta como profissional e não terminou o cadastro aparece como "Profissional (cadastro incompleto)".</p>';
+      if(state.clientsErr) h += '<p class="sub" style="color:var(--err)">Não foi possível carregar: '+esc(state.clientsErr)+'.</p>';
+      var PST={approved:'Profissional aprovado',pending:'Profissional (aguardando aprovação)',rejected:'Profissional recusado',suspended:'Profissional suspenso'};
+      function tipo(c){ if(c.role==='pro') return c.pro_status ? (PST[c.pro_status]||'Profissional') : 'Profissional (cadastro incompleto)'; return 'Cliente'; }
+      h += state.clients.length ? '<div class="tw"><table><thead><tr><th>Nome</th><th>Tipo</th><th>WhatsApp</th><th>E-mail</th><th>Cadastro</th><th>Pedidos</th></tr></thead><tbody>' +
+        state.clients.map(function(c){ return '<tr><td><b>'+esc(c.name)+'</b></td><td>'+esc(tipo(c))+'</td><td>'+esc(c.phone||'')+'</td><td>'+esc(c.email||'')+'</td><td class="num">'+esc(when(c.created_at))+'</td><td class="num">'+esc(c.orders_count)+'</td></tr>'; }).join('') +
+        '</tbody></table></div>' : (state.clientsErr ? '' : empty('Nenhuma conta ainda','Quem criar conta aparece aqui.'));
     } else if(state.tab==='espera'){
       h = '<h2>Lista de espera</h2><p class="sub">Pessoas que se cadastraram no site (principalmente de outras cidades). Para apagar um cadastro a pedido da pessoa (LGPD), use Excluir.</p>';
       if(state.extraErr) h += '<p class="sub" style="color:var(--err)">'+esc(state.extraErr)+'</p>';

@@ -26,6 +26,7 @@
   function friendly(err) {
     var m = String((err && (err.message || err.error_description)) || err || "");
     if (/^Por segurança/.test(m)) return m;
+    if (/captcha/i.test(m)) return "Não conseguimos confirmar que você não é um robô. Atualize a página e tente de novo (se usa bloqueador de anúncios, libere o resolvoja.app.br).";
     if (/invalid login/i.test(m)) return "E-mail ou senha incorretos.";
     if (/already registered|already been registered/i.test(m)) return "Este e-mail já tem cadastro. Use a aba Entrar.";
     if (/not confirmed/i.test(m)) return "Confirme seu e-mail (veja a caixa de entrada) antes de entrar.";
@@ -212,10 +213,11 @@
           '<p id="prohint" class="banner" hidden>Profissional: depois de criar a conta e entrar, você escolhe os <b>serviços</b>, os <b>bairros</b>, informa a <b>experiência</b> e envia uma <b>foto do RG ou CNH</b> na próxima tela. Deixe o documento à mão.</p>' +
       '<label style="font-weight:500;display:flex;gap:8px;align-items:flex-start;margin-top:16px"><input id="ok" type="checkbox" style="width:auto;margin-top:4px"><span>Li e aceito os <a href="/termos.html" target="_blank" rel="noopener">Termos</a> e a <a href="/privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>.</span></label>'
         : "") +
-      '<div id="err"></div><button class="full" id="go" type="submit">' + (signup ? "Criar conta" : "Entrar") + "</button></form>" + (signup ? "" : '<p class="center" style="margin:14px 0 0"><button type="button" class="ghost slim" id="forgot">Esqueci minha senha</button></p>') + (signup ? "" : passkeyLoginHtml()) + installBlock(),
+      '<div id="cfts" style="margin-top:14px"></div><div id="err"></div><button class="full" id="go" type="submit">' + (signup ? "Criar conta" : "Entrar") + "</button></form>" + (signup ? "" : '<p class="center" style="margin:14px 0 0"><button type="button" class="ghost slim" id="forgot">Esqueci minha senha</button></p>') + (signup ? "" : passkeyLoginHtml()) + installBlock(),
       signup ? "Criar conta" : "Entrar", "Peça serviços e receba propostas de profissionais perto de você."
     );
     bindInstall(); passkeyLoginBind();
+    RJCaptcha.montar($("cfts"));
     Array.prototype.forEach.call(document.querySelectorAll('input[name="role"]'), function (r) {
       r.onchange = function () { var h = $("prohint"); if (h) h.hidden = document.querySelector('input[name="role"]:checked').value !== "pro"; };
     });
@@ -229,10 +231,12 @@
       var email = $("email").value.trim(), senha = $("senha").value;
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return bad("Confira o e-mail.");
       if (senha.length < 8) return bad("A senha precisa ter pelo menos 8 caracteres.");
+      if (RJCaptcha.falta()) return bad("Aguarde a verificação anti-robô (a caixa acima do botão) terminar e tente de novo.");
       btn.disabled = true;
       try {
         if (!signup) {
-          var r = await sb.auth.signInWithPassword({ email: email, password: senha });
+          var r = await sb.auth.signInWithPassword({ email: email, password: senha, options: { captchaToken: RJCaptcha.token() } });
+          RJCaptcha.reset();
           if (r.error) throw r.error;
         } else {
           var nome = $("nome").value.trim(), tel = $("tel").value.trim(), digits = tel.replace(/\D/g, "");
@@ -241,7 +245,8 @@
           if (!$("ok").checked) { btn.disabled = false; return bad("Marque a aceitação dos Termos e da Política de Privacidade."); }
           var role = document.querySelector('input[name="role"]:checked').value;
           try { localStorage.setItem("rj_pending", JSON.stringify({ email: email.toLowerCase(), role: role, name: nome, phone: tel })); } catch (x) {}
-          var s = await sb.auth.signUp({ email: email, password: senha, options: { data: { name: nome }, emailRedirectTo: location.origin + "/app/" } });
+          var s = await sb.auth.signUp({ email: email, password: senha, options: { data: { name: nome }, emailRedirectTo: location.origin + "/app/", captchaToken: RJCaptcha.token() } });
+          RJCaptcha.reset();
           if (s.error) throw s.error;
           if (!s.data.session) {
             plain('<div class="card"><p>Enviamos uma mensagem para <b>' + e(email) + '</b>. Abra o link para ativar a conta e depois volte aqui para entrar.' + (role === "pro" ? " Ao entrar, você completa serviços, bairros e experiência." : "") + '</p><button class="full" id="vol" type="button">Ir para Entrar</button></div>', "Confirme seu e-mail");
@@ -256,16 +261,19 @@
   function screenForgot() {
     stopTimer();
     plain('<form class="card" id="f" novalidate><label for="email" style="margin-top:0">E-mail da sua conta</label><input id="email" type="email" autocomplete="email" maxlength="120">' +
-      '<div id="err"></div><button class="full" id="go" type="submit">Enviar link para criar nova senha</button></form><p class="center" style="margin-top:14px"><button type="button" class="ghost slim" id="back">Voltar</button></p>',
+      '<div id="cfts" style="margin-top:14px"></div><div id="err"></div><button class="full" id="go" type="submit">Enviar link para criar nova senha</button></form><p class="center" style="margin-top:14px"><button type="button" class="ghost slim" id="back">Voltar</button></p>',
       "Recuperar senha", "Enviaremos um link para o seu e-mail.");
     $("back").onclick = function () { screenAuth("login"); };
+    RJCaptcha.montar($("cfts"));
     $("f").onsubmit = async function (ev) {
       ev.preventDefault();
       var email = $("email").value.trim();
+      if (RJCaptcha.falta()) { $("err").innerHTML = '<div class="banner err" role="alert">Aguarde a verificação anti-robô (a caixa acima do botão) terminar e tente de novo.</div>'; return; }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { $("err").innerHTML = '<div class="banner err" role="alert">Confira o e-mail.</div>'; return; }
       $("go").disabled = true;
       try {
-        var r = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + "/app/" });
+        var r = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + "/app/", captchaToken: RJCaptcha.token() });
+        RJCaptcha.reset();
         if (r.error) throw r.error;
         plain('<div class="card"><p>Se existir uma conta com <b>' + e(email) + '</b>, enviamos um link para criar uma nova senha. Abra o e-mail (veja também o spam) e clique uma vez no link.</p><button class="full" id="vol" type="button">Voltar para Entrar</button></div>', "Confira seu e-mail");
         $("vol").onclick = function () { screenAuth("login"); };

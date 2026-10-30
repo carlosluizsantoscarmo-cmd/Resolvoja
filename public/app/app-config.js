@@ -2,5 +2,8 @@
 // NUNCA coloque aqui a chave "service_role".
 window.RJ_APP = {
   url: "https://mmjtcyuvhltnkyxpwddd.supabase.co",
-  anonKey: "sb_publishable_4TCdQHUt8RClesgMldSo-w_um_UW6xa"
+  anonKey: "sb_publishable_4TCdQHUt8RClesgMldSo-w_um_UW6xa",
+  // Cloudflare Turnstile (anti-robô) no login, cadastro e "esqueci a senha". Vazio = desligado.
+  // A Secret Key NÃO vai aqui: fica no Supabase (Authentication > Attack Protection).
+  turnstile: "0x4AAAAAAFNMXdAjykLpJeDJ"
 };

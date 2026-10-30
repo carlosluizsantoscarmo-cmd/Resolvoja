@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="/app/app-config.js"></script>
+<script src="/captcha.js"></script>
 <script>
 /* Para usar com dados reais, preencha as duas linhas abaixo (Supabase > Project Settings > API).
    A chave "anon" pode ficar aqui: quem manda é a segurança por linha do banco. NUNCA coloque a chave service_role. */
@@ -187,8 +188,9 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
         });
       },
       login:function(email,pass){
-        return sb.auth.signInWithPassword({email:email,password:pass}).then(function(r){
-          if(r.error) throw new Error('E-mail ou senha incorretos.');
+        return sb.auth.signInWithPassword({email:email,password:pass,options:{captchaToken:RJCaptcha.token()}}).then(function(r){
+          RJCaptcha.reset();
+          if(r.error) throw new Error(/captcha/i.test(r.error.message||'') ? 'Não foi possível confirmar que você não é um robô. Atualize a página e tente de novo.' : 'E-mail ou senha incorretos.');
           return api.checkAdmin(r.data.user.id);
         });
       },
@@ -274,10 +276,12 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       '<p style="color:var(--muted);margin:8px 0 0">Painel da equipe</p>' +
       (LIVE ? '<label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required>' +
               '<label for="pass">Senha</label><input id="pass" type="password" autocomplete="current-password" required>' : '') +
+      (LIVE ? '<div id="cfts" style="margin-top:14px"></div>' : '') +
       '<button class="btn" type="submit">' + (LIVE ? 'Entrar' : 'Ver demonstração') + '</button>' +
       (LIVE ? '<button class="btn ghost" type="button" id="pk" style="width:100%;margin-top:10px">Entrar com Face ID</button>' : '') +
       (LIVE ? '<p style="text-align:center;margin:14px 0 0"><a href="#" id="forgot" style="color:var(--blue,#1F3BD1);font-weight:700">Esqueci minha senha</a></p>' : '') +
       '<div class="msg" id="loginMsg" role="alert">' + esc(msg||'') + '</div></form>';
+    if(LIVE) RJCaptcha.montar(document.getElementById('cfts'));
     var pk = document.getElementById('pk');
     if(pk) pk.addEventListener('click', function(){
       var m = document.getElementById('loginMsg'); m.textContent='';
@@ -288,7 +292,9 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       e.preventDefault();
       var m = document.getElementById('loginMsg'), em = document.getElementById('email').value.trim();
       if(!em){ m.textContent='Digite seu e-mail acima e clique de novo em "Esqueci minha senha".'; return; }
-      sb.auth.resetPasswordForEmail(em,{redirectTo: location.origin + '/app/'}).then(function(r){
+      if(RJCaptcha.falta()){ m.textContent='Aguarde a verificação anti-robô (a caixa acima do botão) terminar e tente de novo.'; return; }
+      sb.auth.resetPasswordForEmail(em,{redirectTo: location.origin + '/app/', captchaToken: RJCaptcha.token()}).then(function(r){
+        RJCaptcha.reset();
         m.textContent = r.error ? 'Não foi possível enviar agora. Tente de novo em alguns minutos.' : 'Pronto! Se este e-mail existir, enviamos um link. Confira também o spam.';
       });
     });
@@ -297,6 +303,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       var email = LIVE ? document.getElementById('email').value.trim() : '';
       var pass = LIVE ? document.getElementById('pass').value : '';
       var m = document.getElementById('loginMsg'); m.textContent='';
+      if(LIVE && RJCaptcha.falta()){ m.textContent='Aguarde a verificação anti-robô (a caixa acima do botão) terminar e tente de novo.'; return; }
       api.login(email,pass).then(function(u){ state.user=u; return api.load(); }).then(renderApp)
         .catch(function(err){ m.textContent = err.message; });
     });

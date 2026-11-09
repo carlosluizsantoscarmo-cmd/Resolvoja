@@ -94,6 +94,31 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
   var state = { tab:'visao', pros:[], reqs:[], disputes:[], payouts:[], negs:[], audit:[], cats:[], regs:[], reports:[], attempts:[], ov:null, user:null, clients:[], leads:[], orders:[], extraErr:'' };
 
   /* ---------------------------------------------------------- utilidades */
+  var PST2={approved:'Aprovado',pending:'Aguardando aprovação',suspended:'Suspenso',rejected:'Recusado'};
+  function showPerfil(d){
+    if(!d){ toast('Perfil não encontrado.', true); return; }
+    function row(k,v){ return '<tr><td style="color:#566080;white-space:nowrap;padding:5px 12px 5px 0;vertical-align:top">'+k+'</td><td style="padding:5px 0">'+v+'</td></tr>'; }
+    var cats = (d.categories||[]).map(esc).join(', ') || '—'; if(d.other_category) cats += ' <i>(pediu: '+esc(d.other_category)+')</i>';
+    var regs = d.serves_all ? 'Todo o Brasil' : ((d.regions||[]).map(esc).join(', ') || '—'); if(d.other_city) regs += ' <i>(pediu: '+esc(d.other_city)+' - '+esc(d.other_neighborhood||'')+')</i>';
+    var av = d.avatar_path && api.pubUrl ? '<img src="'+esc(api.pubUrl(d.avatar_path))+'" alt="" style="width:72px;height:72px;border-radius:50%;object-fit:cover">' : '';
+    var ph = (d.photos||[]).slice(0,8).map(function(p){ return api.pubUrl ? '<img src="'+esc(api.pubUrl(p))+'" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:8px">' : ''; }).join('');
+    var html = '<div style="display:flex;gap:14px;align-items:center;margin-bottom:12px">'+av+'<div><h2 style="margin:0">'+esc(d.name)+'</h2><div style="color:#566080">'+(d.has_profile ? esc(PST2[d.status]||d.status||'') : 'Cadastro profissional não enviado')+'</div></div></div>'+
+      '<table style="border-collapse:collapse;font-size:14px;width:100%">'+
+      row('WhatsApp', esc(d.phone||'—'))+row('E-mail', esc(d.email||'—'))+row('Conta criada', esc(when(d.created_at)))+
+      row('Experiência', d.years_exp!=null ? esc(d.years_exp)+' anos' : '—')+row('Serviços', cats)+row('Atende em', regs)+
+      row('Sobre o trabalho', d.bio ? esc(d.bio) : '—')+
+      row('Termo do prestador', d.terms_at ? 'Aceito em '+esc(when(d.terms_at)) : 'Não aceito')+
+      row('Propostas', esc(d.proposals_total||0)+' enviadas, '+esc(d.proposals_accepted||0)+' aceitas')+
+      row('Documento', d.document_path ? '<button class="btn ghost" data-pdoc="'+esc(d.document_path)+'">Ver documento</button>' : 'Não enviado')+
+      '</table>'+(ph?'<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">'+ph+'</div>':'');
+    var ov = document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;background:rgba(18,26,58,.55);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px';
+    ov.innerHTML = '<div style="background:#fff;color:#121A3A;border-radius:18px;max-width:560px;width:100%;max-height:90vh;overflow:auto;padding:22px">'+html+'<div style="margin-top:16px;text-align:right"><button class="btn" data-fechar="1">Fechar</button></div></div>';
+    ov.addEventListener('click', function(e){ if(e.target===ov || (e.target.getAttribute && e.target.getAttribute('data-fechar'))) ov.remove(); });
+    var db = ov.querySelector('[data-pdoc]');
+    if(db) db.addEventListener('click', function(){ var w = window.open('', '_blank'); api.docUrl(db.getAttribute('data-pdoc')).then(function(u){ if(w) w.location = u; }).catch(function(e){ if(w) w.close(); toast(e.message||'Não foi possível abrir o documento.', true); }); });
+    document.body.appendChild(ov);
+  }
   function esc(s){ var d=document.createElement('div'); d.textContent = s==null ? '' : String(s); return d.innerHTML; }
   function escA(x){ return esc(x).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
   function money(c){ return (c/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
@@ -253,6 +278,8 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       },
       authHeader:function(){ return sb.auth.getSession().then(function(ses){ return {Authorization:'Bearer '+(ses.data&&ses.data.session&&ses.data.session.access_token||'')}; }); },
       delRemote:function(url){ return api.authHeader().then(function(H){ return fetch(url,{method:'DELETE',headers:H}).then(function(r){ if(!r.ok) throw new Error('Não foi possível excluir.'); }); }); },
+      proDetail:function(id){ return sb.rpc('admin_pro_detail',{p_id:id}).then(function(r){ if(r.error) throw new Error(r.error.message); return r.data; }); },
+      pubUrl:function(path){ return sb.storage.from('portfolio').getPublicUrl(path).data.publicUrl; },
       docUrl:function(path){ return sb.storage.from('documentos').createSignedUrl(path,120).then(function(r){ if(r.error||!r.data) throw new Error('Não foi possível abrir o documento.'); return r.data.signedUrl; }); },
       markPaid:function(id){ return sb.rpc('admin_mark_paid',{p_request:id,p_method:'pix'}).then(need); },
       adopt:function(id){ return sb.rpc('admin_adopt_category',{p_pro:id}).then(need); },
@@ -416,7 +443,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
         list.map(function(p){
           var pend = p.status==='pending';
           var av = p.avatar_path ? '<img src="'+esc(sb.storage.from('portfolio').getPublicUrl(p.avatar_path).data.publicUrl)+'" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;margin-right:10px;vertical-align:middle">' : '';
-          return '<tr><td>'+av+'<span style="display:inline-block;vertical-align:middle"><b>'+esc(p.name)+'</b><small>'+esc(p.phone||'')+'</small></span></td><td>'+esc(p.categories||'')+(p.other_category?'<small><span class="pill warn">Pediu: '+esc(p.other_category)+'</span> <button class="btn ghost" data-adopt="'+esc(p.user_id)+'">Criar categoria</button></small>':'')+(p.serves_all?'<small><span class="pill ok">Atende todo o Brasil</span></small>':'')+(p.other_city?'<small><span class="pill warn">Região: '+esc(p.other_neighborhood)+' ('+esc(p.other_city)+')</span> <button class="btn ghost" data-adoptreg="'+esc(p.user_id)+'">Criar região</button></small>':'')+'</td><td class="num">'+esc(p.years_exp==null?'':p.years_exp+' anos')+'</td>' +
+          return '<tr><td>'+av+'<span style="display:inline-block;vertical-align:middle"><b>'+esc(p.name)+'</b><small>'+esc(p.phone||'')+'</small><small><button class="btn ghost" data-perfil="'+esc(p.user_id)+'">Ver perfil</button></small></span></td><td>'+esc(p.categories||'')+(p.other_category?'<small><span class="pill warn">Pediu: '+esc(p.other_category)+'</span> <button class="btn ghost" data-adopt="'+esc(p.user_id)+'">Criar categoria</button></small>':'')+(p.serves_all?'<small><span class="pill ok">Atende todo o Brasil</span></small>':'')+(p.other_city?'<small><span class="pill warn">Região: '+esc(p.other_neighborhood)+' ('+esc(p.other_city)+')</span> <button class="btn ghost" data-adoptreg="'+esc(p.user_id)+'">Criar região</button></small>':'')+'</td><td class="num">'+esc(p.years_exp==null?'':p.years_exp+' anos')+'</td>' +
             '<td>'+(p.accepted_terms?'<span class="pill ok">Aceito</span>':'<span class="pill err">Não aceito</span>')+'</td><td>'+(p.document_path?'<button class="btn ghost" data-doc="'+esc(p.document_path)+'">Ver documento</button>':'<small>sem documento</small>')+'</td><td class="num">'+esc(when(p.created_at))+'</td><td>'+pill(STATUS_PRO,p.status)+'</td>' +
             '<td><div class="acts">' +
               (p.status!=='approved' ? '<button class="btn" data-pro="'+esc(p.user_id)+'" data-to="approved"'+(p.accepted_terms?'':' disabled title="O profissional ainda não aceitou o termo"')+'>Aprovar</button>' : '') +
@@ -465,7 +492,7 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       var PST={approved:'Aprovado',pending:'Aguardando aprovação',suspended:'Suspenso'};
       function sit(c){ return c.pro_status ? (PST[c.pro_status]||c.pro_status) : 'Cadastro incompleto'; }
       h += lista.length ? '<div class="tw"><table><thead><tr><th>Nome</th>'+(isPro?'<th>Situação</th><th>O que falta</th>':'')+'<th>WhatsApp</th><th>E-mail</th><th>Cadastro</th>'+(isPro?'':'<th>Pedidos</th>')+'</tr></thead><tbody>' +
-        lista.map(function(c){ return '<tr><td><b>'+esc(c.name)+'</b></td>'+(isPro?'<td>'+esc(sit(c))+'</td><td>'+esc(c.faltando||'—')+'</td>':'')+'<td>'+esc(c.phone||'')+'</td><td>'+esc(c.email||'')+'</td><td class="num">'+esc(when(c.created_at))+'</td>'+(isPro?'':'<td class="num">'+esc(c.orders_count)+'</td>')+'</tr>'; }).join('') +
+        lista.map(function(c){ return '<tr><td><b>'+esc(c.name)+'</b>'+(isPro?'<small><button class="btn ghost" data-perfil="'+esc(c.id)+'">Ver perfil</button></small>':'')+'</td>'+(isPro?'<td>'+esc(sit(c))+'</td><td>'+esc(c.faltando||'—')+'</td>':'')+'<td>'+esc(c.phone||'')+'</td><td>'+esc(c.email||'')+'</td><td class="num">'+esc(when(c.created_at))+'</td>'+(isPro?'':'<td class="num">'+esc(c.orders_count)+'</td>')+'</tr>'; }).join('') +
         '</tbody></table></div>' : (state.clientsErr ? '' : empty(isPro?'Nenhum profissional ainda':'Nenhum cliente ainda','Quem criar conta aparece aqui.'));
     } else if(state.tab==='espera'){
       h = '<h2>Lista de espera</h2><p class="sub">Pessoas que se cadastraram no site (principalmente de outras cidades). Para apagar um cadastro a pedido da pessoa (LGPD), use Excluir.</p>';
@@ -525,6 +552,13 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
       b.addEventListener('click', function(){
         if(!window.confirm(b.getAttribute('data-ask'))) return;
         b.disabled=true; run(api.delRemote(b.getAttribute('data-delurl')), 'Excluído');
+      });
+    });
+    Array.prototype.forEach.call(v.querySelectorAll('[data-perfil]'), function(b){
+      b.addEventListener('click', function(){
+        if(!api.proDetail){ toast('Disponível só com o painel conectado.', true); return; }
+        b.disabled = true;
+        api.proDetail(b.getAttribute('data-perfil')).then(function(d){ b.disabled=false; showPerfil(d); }).catch(function(e){ b.disabled=false; toast((e.message||'Não foi possível abrir o perfil.')+' Rode a migração 029 no Supabase.', true); });
       });
     });
     Array.prototype.forEach.call(v.querySelectorAll('[data-doc]'), function(b){

@@ -521,6 +521,12 @@ function avisoTexto(type, d, t) {
     ].filter((l, i, a) => l !== "" || a[i - 1] !== "");
     return { subject: `Novo profissional para aprovar: ${nm}`, text: linhas.join("\n") };
   }
+  if (type === "cadastro_incompleto") {
+    const pro = d.kind === "profissional";
+    const falta = pro ? "Falta preencher o formulário de profissional (serviços, onde você atende e uma foto do seu RG ou CNH)." : "Falta informar seu nome e WhatsApp.";
+    const ate = t(d.delete_on, 12);
+    return { subject: "Falta pouco para concluir seu cadastro no Resolvo Já", text: `Olá${nome(d.name) ? ", " + nome(d.name) : ""}!\n\nVocê criou sua conta no Resolvo Já, mas ainda não concluiu o cadastro. ${falta}\n\nLeva poucos minutos: abra ${APP_URL} e entre com o seu e-mail.${ate ? `\n\nSe o cadastro não for concluído até ${ate}, vamos excluir sua conta e seus dados para não ficarem guardados sem uso. Você pode criar a conta de novo quando quiser.` : ""}\n\nPrecisa de ajuda? Responda este e-mail ou chame no WhatsApp: (27) 99613-3207.\n\nVocê recebe este e-mail porque criou uma conta no Resolvo Já (resolvoja.app.br).` };
+  }
   if (type === "pro_aprovado") {
     return { subject: "Seu cadastro foi aprovado no Resolvo Já", text: `Olá, ${nome(d.pro_name)}!\n\nSeu cadastro foi aprovado. Você já pode ver os pedidos da sua área e enviar propostas.\n\nDica: responda rápido e descreva bem o que está incluso no valor.${rodape}` };
   }

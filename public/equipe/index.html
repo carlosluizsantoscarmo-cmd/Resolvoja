@@ -425,18 +425,20 @@ select,input,textarea{font:500 15px var(--f-body);color:var(--text);background:v
             '</div></td></tr>';
         }).join('') + '</tbody></table></div>' : empty('Nenhum cadastro ainda','Os profissionais aparecem aqui assim que se cadastrarem.');
     } else if(state.tab==='negociacoes'){
-      h = '<h2>Negociações</h2><p class="sub">Pedidos em que o cliente já escolheu uma proposta. Combine o pagamento pelo WhatsApp e, quando receber, clique em “Marcar como pago”.</p>';
+      h = '<h2>Negociações</h2><p class="sub">Pedidos em que o cliente já escolheu uma proposta, inclusive os que foram cancelados depois (com o motivo). Chame o cliente pelo WhatsApp para retomar o pagamento.</p>';
       if(state.negsErr) h += '<p class="sub" style="color:var(--err,#B3261E)">Não foi possível carregar: '+esc(state.negsErr)+'. Confira se a migração 006 foi rodada no Supabase.</p>';
       h += state.negs.length ? '<div class="tw"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Profissional</th><th>Valor</th><th>Status</th><th>Ação</th></tr></thead><tbody>' +
         state.negs.map(function(n){
           var wait = n.status==='awaiting_payment';
+          var canc = n.status==='cancelled';
+          var why = canc ? (n.pay_status==='failed' ? 'Pagamento recusado'+(n.pay_method==='card'?' (cartão)':n.pay_method==='pix'?' (Pix)':'') : n.pay_status ? 'Pagamento '+n.pay_status : 'Cancelado antes de pagar') : '';
           var mc = 'Olá, '+n.client_name+'! Aqui é do Resolvo Já. Você escolheu a proposta de '+n.pro_name+' para "'+n.title+'" ('+money(n.amount_cents)+'). Vamos combinar o pagamento?';
           var mp = 'Olá, '+n.pro_name+'! Aqui é do Resolvo Já. O cliente aceitou sua proposta para "'+n.title+'" ('+money(n.amount_cents)+'). Estamos combinando o pagamento e já te avisamos para seguir.';
           return '<tr><td><b>'+esc(n.title)+'</b><small>'+esc(n.category)+' · '+esc(n.bairro)+' · '+esc(when(n.accepted_at))+'</small></td>' +
             '<td>'+esc(n.client_name)+'<small>'+esc(n.client_phone||'sem telefone')+'</small>'+wa(n.client_phone,mc)+'</td>' +
             '<td>'+esc(n.pro_name)+'<small>'+esc(n.pro_phone||'sem telefone')+'</small>'+wa(n.pro_phone,mp)+'</td>' +
             '<td class="num">'+esc(money(n.amount_cents))+'<small>comissão '+esc(money(Math.round(n.amount_cents/10)))+'</small></td>' +
-            '<td>'+(wait?'<span class="pill warn">Aguardando pagamento</span>':'<span class="pill ok">Pago · em andamento</span>')+'</td>' +
+            '<td>'+(canc?'<span class="pill err">Cancelado</span><small>'+esc(why)+'</small>':wait?'<span class="pill warn">Aguardando pagamento</span>':'<span class="pill ok">Pago · em andamento</span>')+'</td>' +
             '<td>'+(wait?'<button class="btn" data-paid="'+esc(n.request_id)+'">Marcar como pago</button>':'')+'</td></tr>';
         }).join('') + '</tbody></table></div>' : empty('Nenhuma negociação','Quando um cliente aceitar uma proposta, ela aparece aqui e você recebe um e-mail.');
     } else if(state.tab==='pedidos'){
